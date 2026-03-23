@@ -24,7 +24,7 @@ export default function MenuCard({ item, qty = 0, onAdd }) {
             )}
 
             {/* Image / Emoji */}
-            <div className="w-full aspect-square flex items-center justify-center overflow-hidden relative" style={{ background: "var(--bg-secondary)" }}>
+            <div className="w-full flex items-center justify-center overflow-hidden relative h-[120px] max-[480px]:h-auto max-[480px]:aspect-[4/3]" style={{ background: "var(--bg-secondary)" }}>
                 {item.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -33,14 +33,14 @@ export default function MenuCard({ item, qty = 0, onAdd }) {
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                     />
                 ) : (
-                    <span className="text-[56px] select-none filter drop-shadow-sm transition-transform duration-500 hover:scale-110">{item.emoji}</span>
+                    <span className="text-[48px] select-none filter drop-shadow-sm transition-transform duration-500 hover:scale-110">{item.emoji}</span>
                 )}
                 {/* Subtle glass reflection overlay */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent flex to-white/20 pointer-events-none" />
             </div>
 
             {/* Info */}
-            <div className="p-3 flex-1 flex flex-col justify-between gap-1 relative bg-white">
+            <div className="flex-1 flex flex-col justify-between gap-1 relative bg-white" style={{ padding: "10px 12px" }}>
                 <p className="text-[14px] font-semibold leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>
                     {item.name}
                 </p>

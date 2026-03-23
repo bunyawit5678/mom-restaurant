@@ -57,13 +57,13 @@ function MenuItemCard({ item, qty, onAdd, onRemove }) {
       )}
 
       {/* Image Area */}
-      <div className="w-full relative flex items-center justify-center"
-           style={{ aspectRatio: "4/3", background: "linear-gradient(135deg, #f8f4ff, #e8f4fd)" }}>
+      <div className="w-full relative flex items-center justify-center h-[120px] max-[480px]:h-auto max-[480px]:aspect-[4/3] overflow-hidden"
+           style={{ background: "linear-gradient(135deg, #f8f4ff, #e8f4fd)" }}>
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
         ) : (
-          <span style={{ fontSize: "36px" }}>{item.emoji}</span>
+          <span style={{ fontSize: "48px" }}>{item.emoji}</span>
         )}
 
         {/* Unavailable Overlay */}
@@ -75,7 +75,7 @@ function MenuItemCard({ item, qty, onAdd, onRemove }) {
       </div>
 
       {/* Body */}
-      <div className="p-3 flex flex-col flex-1 justify-between gap-2">
+      <div className="flex flex-col flex-1 justify-between gap-2" style={{ padding: "10px 12px" }}>
         <div>
           <p className="text-[13px] font-semibold leading-tight line-clamp-2" style={{ color: "var(--text-primary)" }}>{item.name}</p>
         </div>
@@ -359,7 +359,7 @@ function MenuPageInner() {
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>กำลังโหลดเมนู...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-[10px]">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[10px]">
             {filtered.map((item) => (
               <MenuItemCard
                 key={item.id}
