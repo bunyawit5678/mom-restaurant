@@ -1,5 +1,4 @@
 "use client";
-import { Suspense } from 'react';
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -418,35 +417,6 @@ function MenuPageInner() {
 
     </div>
   );
-}
-
-function MenuPageInner() {
-  return (
-    <Suspense fallback={
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#F8F7FF'
-      }}>
-        <div style={{ textAlign: 'center', color: '#a78bfa' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🍜</div>
-          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14 }}>กำลังโหลด...</div>
-        </div>
-      </div>
-    }>
-      <MenuPageInner />
-    </Suspense>
-  )
-}
-
-function MenuPageInner() {
-  return (
-    <Suspense fallback={<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#F8F7FF'}}><div style={{textAlign:'center',color:'#a78bfa'}}><div style={{fontSize:32}}>🍜</div><div>กำลังโหลด...</div></div></div>}>
-      <MenuPageInner />
-    </Suspense>
-  )
 }
 
 export default function MenuPage() {
