@@ -7,35 +7,44 @@ export const CATEGORIES = {
 };
 
 const MENU = [
-  // ── Rice ──────────────────────────────────────────────────────────
-  { id:  1, name: "ข้าวผัดกุ้ง",          price: 60, category: "rice",    emoji: "🍤", available: true  },
-  { id:  2, name: "ข้าวผัดหมู",           price: 50, category: "rice",    emoji: "🍚", available: true  },
-  { id:  3, name: "ข้าวหมูแดง",           price: 55, category: "rice",    emoji: "🥩", available: true  },
-  { id:  4, name: "ข้าวมันไก่",           price: 55, category: "rice",    emoji: "🍗", available: true  },
-
-  // ── Noodle ────────────────────────────────────────────────────────
-  { id:  5, name: "ผัดไทยกุ้ง",           price: 70, category: "noodle",  emoji: "🍜", available: true  },
-  { id:  6, name: "บะหมี่หมูแดงแห้ง",    price: 55, category: "noodle",  emoji: "🍝", available: true  },
-  { id:  7, name: "เส้นใหญ่ราดหน้าหมู",  price: 60, category: "noodle",  emoji: "🥢", available: true  },
-  { id:  8, name: "ก๋วยเตี๋ยวเรือ",       price: 50, category: "noodle",  emoji: "🛶", available: false },
-
-  // ── Stir-fry / Fried ──────────────────────────────────────────────
-  { id:  9, name: "ผัดกะเพราหมูสับ",     price: 55, category: "stirfry", emoji: "🌿", available: true  },
-  { id: 10, name: "ผัดกะเพราไก่ไข่ดาว",  price: 60, category: "stirfry", emoji: "🍳", available: true  },
-  { id: 11, name: "ปลาทอดราดพริก",       price: 90, category: "stirfry", emoji: "🐟", available: true  },
-  { id: 12, name: "ไก่ทอดกระเทียมพริกไทย", price: 65, category: "stirfry", emoji: "🍗", available: true  },
-
-  // ── Soup / Curry ──────────────────────────────────────────────────
-  { id: 13, name: "แกงเขียวหวานไก่",     price: 65, category: "soup",    emoji: "🥘", available: true  },
-  { id: 14, name: "ต้มยำกุ้ง",           price: 80, category: "soup",    emoji: "🦐", available: true  },
-  { id: 15, name: "ต้มข่าไก่",           price: 70, category: "soup",    emoji: "🍲", available: true  },
-  { id: 16, name: "แกงมัสมั่นเนื้อ",    price: 85, category: "soup",    emoji: "🫕", available: false },
-
-  // ── Drinks ────────────────────────────────────────────────────────
-  { id: 17, name: "น้ำเปล่า",            price: 10, category: "drink",   emoji: "💧", available: true  },
-  { id: 18, name: "ชาไทยเย็น",           price: 25, category: "drink",   emoji: "🧋", available: true  },
-  { id: 19, name: "โอเลี้ยง",            price: 20, category: "drink",   emoji: "☕", available: true  },
-  { id: 20, name: "น้ำส้มคั้นสด",        price: 30, category: "drink",   emoji: "🍊", available: true  },
+  { id: 1,  name: "ข้าวราดกะเพราไข่ข้น",           price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 2,  name: "ข้าวราดไข่ข้น",                 price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 3,  name: "ข้าวราดจิ้มแจ่ว",               price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 4,  name: "ข้าวราดผัดผงกะหรี่",             price: 55, category: "rice",    emoji: "🍛", available: true },
+  { id: 5,  name: "ข้าวราดผัดกะเพราไข่เยี่ยวม้า",     price: 55, category: "rice",    emoji: "🍛", available: true },
+  { id: 6,  name: "ข้าวราดผัดกะเพราเต้าหู้ไข่",       price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 7,  name: "ข้าวราดผัดคะน้า",               price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 8,  name: "ข้าวราดผัดพริกอ่อน",             price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 9,  name: "ข้าวราดผัดกะเพรา",              price: 45, category: "rice",    emoji: "🍛", available: true },
+  { id: 10, name: "ข้าวราดผัดผักรวม",              price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 11, name: "ข้าวราดผัดผักรวมเต้าหู้ไข่",       price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 12, name: "ข้าวราดหมูหวาน",                price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 13, name: "ข้าวราดทอดกระเทียมพริกไทย",       price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 14, name: "ข้าวคลุกกะปิ",                  price: 60, category: "rice",    emoji: "🍛", available: true },
+  { id: 15, name: "ข้าวลาบ",                       price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 16, name: "ข้าวต้มทรงเครื่อง",              price: 50, category: "rice",    emoji: "🍲", available: true },
+  { id: 17, name: "ข้าวราดพริกแกงพะแนง",            price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 18, name: "ข้าวราดฉู่ฉี่",                  price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 19, name: "ข้าวราดผัดพริกเผา",              price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 20, name: "ข้าวราดผัดพริกแกง",              price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 21, name: "ข้าวราดผัดผักบุ้งไฟแดง",          price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 22, name: "ข้าวราดยำ",                     price: 50, category: "rice",    emoji: "🍛", available: true },
+  { id: 23, name: "ข้าวผัดไข่",                    price: 50, category: "rice",    emoji: "🍚", available: true },
+  { id: 24, name: "ข้าวผัดเครื่องต้มยำ",             price: 50, category: "rice",    emoji: "🍚", available: true },
+  { id: 25, name: "ข้าวผัดปลาทู",                  price: 50, category: "rice",    emoji: "🍚", available: true },
+  { id: 26, name: "ไข่เจียวหมูยอ",                 price: 45, category: "stirfry", emoji: "🍳", available: true },
+  { id: 27, name: "ไข่เจียวไส้กรอก",                price: 45, category: "stirfry", emoji: "🍳", available: true },
+  { id: 28, name: "ข้าวไข่เจียวทรงเครื่อง",          price: 40, category: "rice",    emoji: "🍳", available: true },
+  { id: 29, name: "ข้าวไข่ยัดไส้",                  price: 50, category: "rice",    emoji: "🍳", available: true },
+  { id: 30, name: "ข้าวราดไข่เจียว",                price: 45, category: "rice",    emoji: "🍳", available: true },
+  { id: 31, name: "ไข่เจียวชะอมทอดน้ำพริกกะปิ",      price: 50, category: "stirfry", emoji: "🍳", available: true },
+  { id: 32, name: "ผัดซีอิ๊ว",                     price: 50, category: "noodle",  emoji: "🍝", available: true },
+  { id: 33, name: "ราดหน้า",                       price: 50, category: "noodle",  emoji: "🍜", available: true },
+  { id: 34, name: "มาม่าผัด",                      price: 50, category: "noodle",  emoji: "🍝", available: true },
+  { id: 35, name: "ผัดขี้เมา",                     price: 50, category: "noodle",  emoji: "🍝", available: true },
+  { id: 36, name: "สุกี้",                         price: 50, category: "soup",    emoji: "🍲", available: true },
+  { id: 37, name: "น้ำเปล่า",                      price: 10, category: "drink",   emoji: "💧", available: true },
+  { id: 38, name: "น้ำแข็ง (แก้ว)",                price: 2,  category: "drink",   emoji: "🧊", available: true },
 ];
 
 export default MENU;
