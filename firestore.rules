@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── ORDERS ──────────────────────────────────────────────────────────────
+    // Customers create orders anonymously (no login required).
+    // Admin reads and updates orders via the dashboard.
+    // Deletes are disabled — orders are permanent records.
+    //
+    // TODO (add auth): change read/update to:
+    //   allow read, update: if request.auth != null && request.auth.token.admin == true;
+    match /orders/{orderId} {
+      allow create: if true;
+      allow read, update: if true;
+      allow delete: if false;
+    }
+
+    // ── MENU ────────────────────────────────────────────────────────────────
+    // All customers can read the menu without logging in.
+    // Admin can write (add, update, delete) menu items.
+    //
+    // TODO (add auth): change write to:
+    //   allow write: if request.auth != null && request.auth.token.admin == true;
+    match /menu/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ── CATEGORIES ──────────────────────────────────────────────────────────
+    // Same policy as menu — public read, admin write.
+    //
+    // TODO (add auth): change write to:
+    //   allow write: if request.auth != null && request.auth.token.admin == true;
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

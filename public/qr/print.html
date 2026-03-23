@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ร้านแม่ — พิมพ์ QR Code โต๊ะ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ───────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Screen styles ───────────────────────────────────────────────────── */
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f0ece6;
+      padding: 24px;
+    }
+
+    .screen-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .screen-header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1C1410;
+    }
+
+    .screen-header p {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    /* ── Card grid ───────────────────────────────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 2px dashed #ccc; /* cut-line guide */
+      border-radius: 12px;
+      padding: 16px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card img {
+      width: 100%;
+      max-width: 200px;
+      height: auto;
+      display: block;
+    }
+
+    .table-number {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1C1410;
+      letter-spacing: 0.5px;
+    }
+
+    .restaurant-name {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .hint {
+      font-size: 10px;
+      color: #bbb;
+    }
+
+    /* ── Print styles ────────────────────────────────────────────────────── */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 5mm;
+      }
+
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .screen-header {
+        display: none;
+      }
+
+      .grid {
+        max-width: 100%;
+        gap: 0;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .card {
+        border-radius: 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        padding: 8mm 6mm 6mm;
+        border: 1.5px dashed #aaa;
+      }
+
+      .card img {
+        max-width: 160px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="screen-header">
+    <h1>🍜 ร้านแม่ — QR Code แต่ละโต๊ะ</h1>
+    <p>พิมพ์หน้านี้ ตัดตามเส้นประ แล้วนำไปวางที่โต๊ะ</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <img src="table-1.png" alt="QR โต๊ะ 1" />
+      <p class="table-number">โต๊ะ 1</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-2.png" alt="QR โต๊ะ 2" />
+      <p class="table-number">โต๊ะ 2</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-3.png" alt="QR โต๊ะ 3" />
+      <p class="table-number">โต๊ะ 3</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-4.png" alt="QR โต๊ะ 4" />
+      <p class="table-number">โต๊ะ 4</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-5.png" alt="QR โต๊ะ 5" />
+      <p class="table-number">โต๊ะ 5</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-6.png" alt="QR โต๊ะ 6" />
+      <p class="table-number">โต๊ะ 6</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-7.png" alt="QR โต๊ะ 7" />
+      <p class="table-number">โต๊ะ 7</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+    <div class="card">
+      <img src="table-8.png" alt="QR โต๊ะ 8" />
+      <p class="table-number">โต๊ะ 8</p>
+      <p class="restaurant-name">ร้านแม่</p>
+      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
