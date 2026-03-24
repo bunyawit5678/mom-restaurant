@@ -8,8 +8,8 @@ import QRCode       from "qrcode";
 import { mkdirSync, existsSync } from "fs";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BASE_URL   = "https://your-app.vercel.app"; // ← change after Vercel deploy
-const NUM_TABLES = 8;
+const BASE_URL   = "https://mom-restaurant-87ht.vercel.app"; // ← change after Vercel deploy
+const NUM_TABLES = 5;
 const OUTPUT_DIR = "./public/qr";
 
 // ── QR options ────────────────────────────────────────────────────────────────
