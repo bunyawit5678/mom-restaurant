@@ -216,7 +216,7 @@ function MenuPageInner() {
       <div style={{position:'sticky',top:0,zIndex:30}}>
         {/* HEADER */}
         <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>ร้านแม่ <span style={{fontSize:'13px',color:'#6B7280',fontWeight:400,marginLeft:'4px'}}>โต๊ะ {table}</span></div>
+          <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>ครัวตุ๊กตาอาหารตามสั่ง <span style={{fontSize:'13px',color:'#6B7280',fontWeight:400,marginLeft:'4px'}}>โต๊ะ {table}</span></div>
           <button onClick={() => hasCart && setShowCart(true)} style={{position:'relative',background:'none',border:'none',fontSize:'24px',color:'#7C3AED'}}>
             🛒
             {hasCart && (

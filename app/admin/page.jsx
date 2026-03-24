@@ -378,7 +378,7 @@ export default function AdminPage() {
         <div style={{minHeight:'100vh',background:'#FAFAFA',paddingBottom:'80px'}}>
             {/* TOP BAR */}
             <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>แดชบอร์ด</div>
+                <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>แดชบอร์ด ครัวตุ๊กตาอาหารตามสั่ง</div>
                 <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:600,color:'#10B981'}}>
                     <div style={{width:'8px',height:'8px',borderRadius:'4px',background:'#10B981',animation:'pulse 2s infinite'}} />
                     Live

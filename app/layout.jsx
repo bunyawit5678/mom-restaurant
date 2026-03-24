@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "ร้านแม่ — สั่งอาหาร",
+  title: "ครัวตุ๊กตาอาหารตามสั่ง — สั่งอาหาร",
   description: "สแกน QR เพื่อดูเมนูและสั่งอาหาร",
 };
 
