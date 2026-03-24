@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { listenToMenu, addOrder } from "@/lib/firestore";
+import { listenToMenu, addOrder, listenToOptionGroups } from "@/lib/firestore";
 import { CATEGORIES } from "@/data/menu";
 
 function SuccessModal({ onClose }) {
@@ -55,6 +55,58 @@ function MenuItemCard({ item, qty, onAdd, onRemove }) {
   )
 }
 
+function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
+  const groupsToChoose = allGroups.filter(g => item.optionGroupIds?.includes(g.id));
+  const [selections, setSelections] = useState(() => {
+    const init = {};
+    groupsToChoose.forEach(g => init[g.id] = 0);
+    return init;
+  });
+
+  const addedPrice = groupsToChoose.reduce((sum, g) => sum + (g.options[selections[g.id]]?.price || 0), 0);
+  const totalPrice = item.price + addedPrice;
+
+  function handleSubmit() {
+    const selectedOptions = groupsToChoose.map(g => g.options[selections[g.id]]);
+    onConfirm(item, selectedOptions, addedPrice);
+  }
+
+  return (
+    <>
+      <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',zIndex:60}} onClick={onClose} />
+      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:70,maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'12px',display:'flex',justifyContent:'center'}}><div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} /></div>
+        <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>{item.name}</h2>
+            <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
+        </div>
+        <div style={{overflowY:'auto',flex:1,padding:'0 16px 24px',display:'flex',flexDirection:'column',gap:'20px'}}>
+            {groupsToChoose.map(group => (
+              <div key={group.id}>
+                 <div style={{fontSize:'14px',fontWeight:700,color:'#374151',marginBottom:'12px'}}>{group.name} <span style={{fontSize:'12px',color:'#EF4444',fontWeight:500}}>(เลือก 1 อย่าง)</span></div>
+                 {group.options.map((opt, idx) => (
+                    <label key={idx} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px',border:'1px solid',borderColor: selections[group.id]===idx ? '#7C3AED' : '#E5E7EB',borderRadius:'12px',marginBottom:'8px',background: selections[group.id]===idx ? '#EDE9FE' : 'white'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                            <input type="radio" name={group.id} checked={selections[group.id]===idx} onChange={() => setSelections({...selections, [group.id]: idx})} style={{width:'18px',height:'18px',accentColor:'#7C3AED'}} />
+                            <span style={{fontSize:'15px',fontWeight:500,color: selections[group.id]===idx ? '#7C3AED' : '#111111'}}>{opt.name}</span>
+                        </div>
+                        {opt.price > 0 && <span style={{fontSize:'14px',color:'#6B7280'}}>+฿{opt.price}</span>}
+                    </label>
+                 ))}
+              </div>
+            ))}
+            
+            <div style={{marginTop:'8px'}}>
+              <button onClick={handleSubmit} style={{width:'100%',padding:'16px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'16px',boxShadow:'0 4px 12px rgba(124,58,237,0.3)'}}>
+                เพิ่มลงตะกร้า • ฿{totalPrice}
+              </button>
+            </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, submitting }) {
   return (
     <>
@@ -75,9 +127,9 @@ function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, s
                 <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{item.price * item.qty}</div>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:'12px',background:'#F3F4F6',padding:'4px',borderRadius:'20px'}}>
-                <button onClick={() => item.onRemove(item)} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>−</button>
+                <button onClick={() => item.onRemove()} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>−</button>
                 <div style={{fontSize:'14px',fontWeight:600}}>{item.qty}</div>
-                <button onClick={() => item.onAdd(item)} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>+</button>
+                <button onClick={() => item.onAdd()} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>+</button>
               </div>
             </div>
           ))}
@@ -116,21 +168,26 @@ function MenuPageInner() {
 
   // ── State ────────────────────────────────────────────────────────────────
   const [menuItems, setMenuItems]     = useState([]);
+  const [optionGroups, setOptionGroups] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [activeCategory, setCategory] = useState("all");
-  const [cart, setCart]               = useState({});   // { [id]: { ...item, qty } }
+  const [cart, setCart]               = useState({});   // { [cartItemId]: { ...item, qty } }
   const [note, setNote]               = useState("");
   const [submitting, setSubmitting]   = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCart, setShowCart]       = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   // ── Firestore realtime listener ───────────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = listenToMenu((items) => {
+    const unsubMenu = listenToMenu((items) => {
       setMenuItems(items);
       setLoading(false);
     });
-    return () => unsubscribe(); // cleanup on unmount
+    const unsubOpts = listenToOptionGroups((groups) => {
+      setOptionGroups(groups);
+    });
+    return () => { unsubMenu(); unsubOpts(); };
   }, []);
 
   const cartValues = Object.values(cart);
@@ -142,24 +199,51 @@ function MenuPageInner() {
     if (!hasCart && showCart) setShowCart(false);
   }, [hasCart, showCart]);
 
-  const addToCart = (item) =>
-    setCart((prev) => ({
-      ...prev,
-      [item.id]: prev[item.id]
-        ? { ...prev[item.id], qty: prev[item.id].qty + 1 }
-        : { ...item, qty: 1 },
-    }));
+  const handleItemClick = (item) => {
+    if (item.optionGroupIds && item.optionGroupIds.length > 0) {
+      setSelectedItem(item);
+    } else {
+      addToCart(item, [], 0);
+    }
+  };
 
-  const removeFromCart = (item) =>
-    setCart((prev) => {
-      const current = prev[item.id];
+  const addToCart = (baseItem, selectedOptions = [], addedPrice = 0) => {
+    const optionsText = selectedOptions.map(o => o.name).join(", ");
+    const nameWithOpts = optionsText ? `${baseItem.name} (${optionsText})` : baseItem.name;
+    const cartItemId = optionsText ? `${baseItem.id}_${optionsText}` : baseItem.id;
+
+    setCart(prev => ({
+      ...prev,
+      [cartItemId]: prev[cartItemId]
+        ? { ...prev[cartItemId], qty: prev[cartItemId].qty + 1 }
+        : { 
+            baseId: baseItem.id, 
+            id: cartItemId,
+            name: nameWithOpts, 
+            price: baseItem.price + addedPrice, 
+            emoji: baseItem.emoji, 
+            imageUrl: baseItem.imageUrl,
+            qty: 1,
+            category: baseItem.category,
+            optionsText
+          }
+    }));
+    setSelectedItem(null);
+  };
+
+  const handleAddCartItem = (cartItemId) => setCart(prev => ({...prev, [cartItemId]: {...prev[cartItemId], qty: prev[cartItemId].qty + 1}}));
+
+  const removeFromCart = (cartItemId) => {
+    setCart(prev => {
+      const current = prev[cartItemId];
       if (!current || current.qty <= 1) {
         const next = { ...prev };
-        delete next[item.id];
+        delete next[cartItemId];
         return next;
       }
-      return { ...prev, [item.id]: { ...current, qty: current.qty - 1 } };
+      return { ...prev, [cartItemId]: { ...current, qty: current.qty - 1 } };
     });
+  };
 
   const handleSubmit = async () => {
     if (!hasCart || submitting) return;
@@ -277,9 +361,9 @@ function MenuPageInner() {
                 <MenuItemCard 
                   key={item.id} 
                   item={item} 
-                  qty={cart[item.id]?.qty || 0}
-                  onAdd={addToCart}
-                  onRemove={removeFromCart}
+                  qty={cartValues.filter(c => c.baseId === item.id).reduce((s, c) => s + c.qty, 0)}
+                  onAdd={handleItemClick}
+                  onRemove={() => {}}
                 />
               ))}
             </div>
@@ -304,7 +388,7 @@ function MenuPageInner() {
 
       {showCart && (
         <CartDrawer
-          cartItems={cartValues.map(i => ({...i, onAdd: addToCart, onRemove: removeFromCart}))}
+          cartItems={cartValues.map(i => ({...i, onAdd: () => handleAddCartItem(i.id), onRemove: () => removeFromCart(i.id)}))}
           totalPrice={totalPrice}
           note={note}
           setNote={setNote}
@@ -315,6 +399,15 @@ function MenuPageInner() {
       )}
 
       {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
+      
+      {selectedItem && (
+        <ItemOptionsModal 
+          item={selectedItem} 
+          allGroups={optionGroups} 
+          onClose={() => setSelectedItem(null)} 
+          onConfirm={addToCart} 
+        />
+      )}
     </div>
   )
 }

@@ -10,6 +10,10 @@ import {
     updateMenuAvailability,
     addMenuItem,
     uploadMenuImage,
+    listenToOptionGroups,
+    addOptionGroup,
+    updateOptionGroup,
+    deleteOptionGroup
 } from "@/lib/firestore";
 import { generatePromptPayPayload } from "@/lib/promptpay";
 import { CATEGORIES } from "@/data/menu";
@@ -202,7 +206,80 @@ function HistoryModal({ order, onClose }) {
 
 const EMOJI_OPTIONS = ["🍛","🍲","🍝","🍜","🍚","🍳","🥘","🫕","🥗","💧","🧊","🍹","🥤"];
 
-function AddMenuModal({ onClose }) {
+function OptionGroupModal({ group, onClose }) {
+    const [name, setName] = useState(group ? group.name : "");
+    const [options, setOptions] = useState(group && group.options && group.options.length > 0 ? group.options : [{ name: "", price: 0 }]);
+    const [saving, setSaving] = useState(false);
+
+    function handleAddOption() {
+        setOptions([...options, { name: "", price: 0 }]);
+    }
+    function handleRemoveOption(idx) {
+        setOptions(options.filter((_, i) => i !== idx));
+    }
+    function handleOptionChange(idx, field, value) {
+        const newOpts = [...options];
+        newOpts[idx][field] = value;
+        setOptions(newOpts);
+    }
+    async function handleSave(e) {
+        e.preventDefault();
+        if (!name.trim()) return;
+        const validOptions = options.filter(o => o.name.trim()).map(o => ({ name: o.name.trim(), price: Number(o.price) || 0 }));
+        if (validOptions.length === 0) return;
+        setSaving(true);
+        try {
+            if (group) await updateOptionGroup(group.id, { name: name.trim(), options: validOptions });
+            else await addOptionGroup({ name: name.trim(), options: validOptions });
+            onClose();
+        } finally {
+            setSaving(false);
+        }
+    }
+    async function handleDelete() {
+        if (!group) return;
+        if (!window.confirm("ต้องการลบกลุ่มตัวเลือกนี้หรือไม่?")) return;
+        setSaving(true);
+        await deleteOptionGroup(group.id);
+        onClose();
+    }
+
+    return (
+        <>
+            <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',zIndex:40}} onClick={!saving ? onClose : undefined} />
+            <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:50,maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
+                <div style={{padding:'12px',display:'flex',justifyContent:'center'}}><div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} /></div>
+                <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>{group ? "แก้ไขกลุ่มตัวเลือก" : "เพิ่มกลุ่มตัวเลือก"}</h2>
+                    <button onClick={onClose} disabled={saving} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
+                </div>
+                <form onSubmit={handleSave} style={{overflowY:'auto',flex:1,padding:'0 16px 24px',display:'flex',flexDirection:'column',gap:'16px'}}>
+                    <div>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>ชื่อกลุ่ม (เช่น เนื้อสัตว์พื้นฐาน) *</label>
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} required style={{width:'100%',borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
+                    </div>
+                    <div>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>ตัวเลือกย่อย</label>
+                        {options.map((opt, i) => (
+                            <div key={i} style={{display:'flex',gap:'8px',marginBottom:'8px'}}>
+                                <input type="text" value={opt.name} onChange={e => handleOptionChange(i, 'name', e.target.value)} placeholder="ชื่อ (เช่น หมู)" style={{flex:2,borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
+                                <input type="number" value={opt.price} onChange={e => handleOptionChange(i, 'price', e.target.value)} placeholder="+ราคา" style={{flex:1,borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
+                                <button type="button" onClick={() => handleRemoveOption(i)} style={{width:'44px',borderRadius:'12px',border:'1px solid #EF4444',background:'#FEF2F2',color:'#EF4444',fontSize:'16px'}}>✕</button>
+                            </div>
+                        ))}
+                        <button type="button" onClick={handleAddOption} style={{width:'100%',padding:'10px',background:'#F3F4F6',color:'#374151',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'14px',marginTop:'4px'}}>+ เพิ่มตัวเลือก</button>
+                    </div>
+                    <div style={{paddingTop:'8px',display:'flex',gap:'12px'}}>
+                        <button type="submit" disabled={saving} style={{flex:1,padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>บันทึก</button>
+                        {group && <button type="button" onClick={handleDelete} disabled={saving} style={{padding:'14px',background:'#FEF2F2',color:'#EF4444',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>ลบ</button>}
+                    </div>
+                </form>
+            </div>
+        </>
+    );
+}
+
+function AddMenuModal({ onClose, optionGroups }) {
     const [name,       setName]       = useState("");
     const [price,      setPrice]      = useState("");
     const [category,   setCategory]   = useState("rice");
@@ -211,7 +288,12 @@ function AddMenuModal({ onClose }) {
     const [preview,    setPreview]    = useState(null);
     const [saving,     setSaving]     = useState(false);
     const [error,      setError]      = useState("");
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const fileInputRef = useRef(null);
+
+    function toggleOptionGroup(id) {
+        setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    }
 
     function handleFileChange(e) {
         const file = e.target.files?.[0];
@@ -245,6 +327,7 @@ function AddMenuModal({ onClose }) {
                 available: true,
                 sortOrder: Date.now(),
                 description: "",
+                optionGroupIds: selectedGroupIds,
             });
 
             onClose();
@@ -314,6 +397,21 @@ function AddMenuModal({ onClose }) {
                         </select>
                     </div>
 
+                    {optionGroups && optionGroups.length > 0 && (
+                        <div>
+                            <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>กลุ่มตัวเลือก (ตัวเลือกเสริม)</label>
+                            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                                {optionGroups.map((group) => (
+                                    <label key={group.id} style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'14px',color:'#111111'}}>
+                                        <input type="checkbox" checked={selectedGroupIds.includes(group.id)} onChange={() => toggleOptionGroup(group.id)} style={{width:'18px',height:'18px',accentColor:'#7C3AED'}} />
+                                        {group.name} 
+                                        <span style={{fontSize:'12px',color:'#6B7280'}}>({group.options.map(o => o.name).join(', ')})</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {error && <div style={{fontSize:'13px',fontWeight:600,color:'#EF4444',padding:'12px',background:'#FEF2F2',borderRadius:'8px'}}>{error}</div>}
 
                     <div style={{paddingTop:'8px'}}>
@@ -336,6 +434,13 @@ export default function AdminPage() {
     const [selectedTable, setSelectedTable] = useState(null);
     const [historyOrder,  setHistoryOrder]  = useState(null);
     const [showAddMenu,   setShowAddMenu]   = useState(false);
+    const [optionGroups,  setOptionGroups]  = useState([]);
+    const [showEditGroup, setShowEditGroup] = useState(null);
+
+    useEffect(() => {
+        const unsub = listenToOptionGroups((groups) => setOptionGroups(groups));
+        return () => unsub();
+    }, []);
 
     useEffect(() => {
         const unsub = listenToActiveOrders((orders) => {
@@ -441,6 +546,7 @@ export default function AdminPage() {
                 <button onClick={() => setActiveTab('tables')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'tables' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'tables' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'tables' ? 600 : 500,fontSize:'15px'}}>โต๊ะ</button>
                 <button onClick={() => setActiveTab('history')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'history' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'history' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'history' ? 600 : 500,fontSize:'15px'}}>ประวัติ</button>
                 <button onClick={() => setActiveTab('menu')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'menu' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'menu' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'menu' ? 600 : 500,fontSize:'15px'}}>เมนู</button>
+                <button onClick={() => setActiveTab('options')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'options' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'options' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'options' ? 600 : 500,fontSize:'15px'}}>กลุ่มตัวเลือก</button>
             </div>
 
             <div style={{padding:'16px'}}>
@@ -540,11 +646,31 @@ export default function AdminPage() {
                         </button>
                     </div>
                 )}
+
+                {activeTab === 'options' && (
+                    <div>
+                        {optionGroups.length === 0 ? <div style={{textAlign:'center',padding:'32px',color:'#6B7280'}}>ไม่มีกลุ่มตัวเลือก</div> : (
+                            optionGroups.map(group => (
+                                <button key={group.id} onClick={() => setShowEditGroup(group)} style={{width:'100%',textAlign:'left',background:'white',border:'1px solid #E5E7EB',borderRadius:'12px',padding:'16px',marginBottom:'8px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                    <div>
+                                        <div style={{fontSize:'15px',fontWeight:600,color:'#111111',marginBottom:'4px'}}>{group.name}</div>
+                                        <div style={{fontSize:'13px',color:'#6B7280'}}>{group.options.map(o => `${o.name} (+฿${o.price})`).join(", ")}</div>
+                                    </div>
+                                    <div style={{color:'#7C3AED',fontSize:'18px'}}>›</div>
+                                </button>
+                            ))
+                        )}
+                        <button onClick={() => setShowEditGroup("new")} style={{position:'fixed',bottom:'24px',right:'24px',width:'56px',height:'56px',borderRadius:'28px',background:'#7C3AED',color:'white',border:'none',fontSize:'28px',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(124,58,237,0.3)',zIndex:30}}>
+                            +
+                        </button>
+                    </div>
+                )}
             </div>
 
             {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onClear={(total) => handleClearTable(selectedTable, total)} />}
             {historyOrder && <HistoryModal order={historyOrder} onClose={() => setHistoryOrder(null)} />}
-            {showAddMenu && <AddMenuModal onClose={() => setShowAddMenu(false)} />}
+            {showAddMenu && <AddMenuModal optionGroups={optionGroups} onClose={() => setShowAddMenu(false)} />}
+            {showEditGroup && <OptionGroupModal group={showEditGroup === "new" ? null : showEditGroup} onClose={() => setShowEditGroup(null)} />}
         </div>
     );
 }
