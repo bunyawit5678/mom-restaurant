@@ -5,6 +5,7 @@ import {
     listenToActiveOrders,
     listenToOrders,
     updateOrderStatus,
+    updateOrder,
     listenToMenu,
     updateMenuAvailability,
     addMenuItem,
@@ -75,10 +76,16 @@ function PromptPayQR({ amount, phone }) {
     );
 }
 
-function TableModal({ tableNum, orders, onClose, onPaid, onDone }) {
+function TableModal({ tableNum, orders, onClose, onClear }) {
     const items      = useMemo(() => mergeItems(orders), [orders]);
     const grandTotal = orders.reduce((s, o) => s + (o.total ?? 0), 0);
     const notes      = orders.map((o) => o.note).filter(Boolean);
+
+    const [customTotal, setCustomTotal] = useState(grandTotal);
+
+    useEffect(() => {
+        setCustomTotal(grandTotal);
+    }, [grandTotal]);
 
     return (
         <>
@@ -111,20 +118,44 @@ function TableModal({ tableNum, orders, onClose, onPaid, onDone }) {
                         </div>
                     )}
                     
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'24px',marginBottom:'24px'}}>
-                        <span style={{fontSize:'15px',color:'#374151'}}>รวมทั้งหมด</span>
-                        <span style={{fontSize:'24px',fontWeight:700,color:'#7C3AED'}}>฿{grandTotal.toLocaleString()}</span>
+                    <div style={{marginTop:'24px',marginBottom:'24px',display:'flex',flexDirection:'column',gap:'12px'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                            <span style={{fontSize:'15px',color:'#374151',fontWeight:600}}>ยอดชำระเบื้องต้น</span>
+                            <span style={{fontSize:'16px',color:'#6B7280'}}>฿{grandTotal.toLocaleString()}</span>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                            <span style={{fontSize:'15px',color:'#111111',fontWeight:700,width:'80px'}}>ยอดสุทธิ</span>
+                            <input 
+                                type="number" 
+                                value={customTotal === '' ? '' : customTotal} 
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === '') {
+                                        setCustomTotal('');
+                                    } else {
+                                        const num = parseInt(val, 10);
+                                        if (num >= 0) setCustomTotal(num);
+                                    }
+                                }}
+                                style={{flex:1, padding:'12px', fontSize:'24px', fontWeight:700, color:'#7C3AED', border:'1px solid #E5E7EB', borderRadius:'12px', textAlign:'right', outline:'none', background:'#FAFAFA'}} 
+                            />
+                            <span style={{fontSize:'20px',fontWeight:700,color:'#7C3AED'}}>฿</span>
+                        </div>
+                        <div style={{display:'flex',gap:'8px',justifyContent:'flex-end'}}>
+                            <button onClick={() => setCustomTotal(prev => (Number(prev)||0) + 10)} style={{padding:'6px 16px', background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:'20px', fontSize:'13px', fontWeight:600, cursor:'pointer'}}>+10</button>
+                            <button onClick={() => setCustomTotal(prev => (Number(prev)||0) + 15)} style={{padding:'6px 16px', background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:'20px', fontSize:'13px', fontWeight:600, cursor:'pointer'}}>+15</button>
+                            <button onClick={() => setCustomTotal(prev => (Number(prev)||0) + 20)} style={{padding:'6px 16px', background:'#F3F4F6', color:'#374151', border:'1px solid #E5E7EB', borderRadius:'20px', fontSize:'13px', fontWeight:600, cursor:'pointer'}}>+20</button>
+                        </div>
                     </div>
                     
                     {orders.some(o => o.status === 'pending') && (
                         <div style={{display:'flex',justifyContent:'center',marginBottom:'24px'}}>
-                            <PromptPayQR amount={grandTotal} phone={PROMPTPAY_PHONE} />
+                            <PromptPayQR amount={Number(customTotal) || 0} phone={PROMPTPAY_PHONE} />
                         </div>
                     )}
                     
                     <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                        <button onClick={onPaid} style={{width:'100%',padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>รับชำระ</button>
-                        <button onClick={onDone} style={{width:'100%',padding:'14px',background:'white',color:'#10B981',borderRadius:'12px',border:'1.5px solid #10B981',fontWeight:600,fontSize:'15px'}}>ปิดโต๊ะ</button>
+                        <button onClick={() => onClear(Number(customTotal) || 0)} style={{width:'100%',padding:'16px',background:'#10B981',color:'white',borderRadius:'12px',border:'none',fontWeight:700,fontSize:'16px'}}>รับชำระและปิดโต๊ะ (Clear Table)</button>
                         <button onClick={onClose} style={{width:'100%',padding:'14px',background:'#F3F4F6',color:'#6B7280',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>ปิด</button>
                     </div>
                 </div>
@@ -353,14 +384,18 @@ export default function AdminPage() {
         return names.length > 40 ? names.slice(0, 40) + "…" : names;
     }
 
-    async function handlePaid(tableNum) {
+    async function handleClearTable(tableNum, finalTotal) {
         const orders = tableOrders(tableNum);
-        await Promise.all(orders.map((o) => updateOrderStatus(o.id, "paid")));
-        setSelectedTable(null);
-    }
+        if (orders.length === 0) return;
 
-    async function handleDone(tableNum) {
-        const orders = tableOrders(tableNum);
+        const originalTotal = tableTotal(orders);
+        const diff = finalTotal - originalTotal;
+        
+        if (diff !== 0) {
+            const latestOrder = [...orders].sort((a,b)=>(b.createdAt?.toDate?.()||new Date()) - (a.createdAt?.toDate?.()||new Date()))[0];
+            await updateOrder(latestOrder.id, { total: (latestOrder.total || 0) + diff });
+        }
+
         await Promise.all(orders.map((o) => updateOrderStatus(o.id, "done")));
         setSelectedTable(null);
     }
@@ -507,7 +542,7 @@ export default function AdminPage() {
                 )}
             </div>
 
-            {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onPaid={() => handlePaid(selectedTable)} onDone={() => handleDone(selectedTable)} />}
+            {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onClear={(total) => handleClearTable(selectedTable, total)} />}
             {historyOrder && <HistoryModal order={historyOrder} onClose={() => setHistoryOrder(null)} />}
             {showAddMenu && <AddMenuModal onClose={() => setShowAddMenu(false)} />}
         </div>
