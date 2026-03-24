@@ -5,195 +5,111 @@ import { useSearchParams } from "next/navigation";
 import { listenToMenu, addOrder } from "@/lib/firestore";
 import { CATEGORIES } from "@/data/menu";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Success Modal
-// ─────────────────────────────────────────────────────────────────────────────
 function SuccessModal({ onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 max-w-xs w-full text-center shadow-2xl" style={{ borderRadius: "var(--radius-xl)" }}>
-        <div className="w-20 h-20 rounded-full mx-auto flex items-center justify-center text-white text-4xl mb-6 shadow-md"
-             style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}>
-          ✓
-        </div>
-        <h2 className="font-serif text-2xl text-gray-900 mb-2 mt-4" style={{ fontFamily: "'DM Serif Display', serif" }}>
-          ส่งออเดอร์ให้แม่ครัวแล้ว!
-        </h2>
-        <p className="text-sm mb-8" style={{ color: "var(--text-muted)", fontFamily: "'DM Sans', sans-serif" }}>
-          กรุณารอรับอาหาร ทางร้านกำลังเตรียมให้นะคะ
-        </p>
-        <button
-          onClick={onClose}
-          className="w-full py-4 text-white font-bold text-base active:scale-95 transition-transform"
-          style={{ background: "var(--primary-gradient)", borderRadius: "var(--radius-md)" }}
-        >
-          ตกลง — สั่งเพิ่ม
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.4)',padding:'16px'}}>
+      <div style={{background:'white',borderRadius:'24px',padding:'32px',width:'100%',maxWidth:'320px',textAlign:'center'}}>
+        <div style={{fontSize:'64px',marginBottom:'16px'}}>✅</div>
+        <h2 style={{fontSize:'20px',fontWeight:700,marginBottom:'8px'}}>ส่งออเดอร์ให้แม่ครัวแล้ว!</h2>
+        <p style={{fontSize:'14px',color:'#6B7280',marginBottom:'24px'}}>กรุณารอรับอาหาร ทางร้านกำลังเตรียมให้นะคะ</p>
+        <button onClick={onClose} style={{width:'100%',padding:'14px',background:'#F3F4F6',color:'#374151',fontWeight:600,borderRadius:'12px',border:'none'}}>
+          กลับไปหน้าเมนู
         </button>
       </div>
     </div>
-  );
+  )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MenuItem Card
-// ─────────────────────────────────────────────────────────────────────────────
 function MenuItemCard({ item, qty, onAdd, onRemove }) {
-  const sold = !item.available;
-
+  const isAvailable = item.available !== false;
   return (
-    <div className={`relative bg-white flex flex-col overflow-hidden transition-all ${sold ? 'opacity-50' : ''}`}
-         style={{
-           border: "1px solid rgba(108,99,255,0.08)",
-           borderRadius: "var(--radius-md)",
-           boxShadow: "var(--shadow-sm)",
-         }}>
-
-      {/* Qty Bubble */}
-      {qty > 0 && (
-        <div className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-[11px] shadow-sm"
-             style={{ background: "var(--warning)" }}>
-          {qty}
-        </div>
-      )}
-
-      {/* Image Area */}
-      <div className="w-full relative flex items-center justify-center h-[120px] max-[480px]:h-auto max-[480px]:aspect-[4/3] overflow-hidden"
-           style={{ background: "linear-gradient(135deg, #f8f4ff, #e8f4fd)" }}>
+    <div style={{display:'flex',padding:'14px 16px',borderBottom:'1px solid #F3F4F6',opacity: isAvailable ? 1 : 0.45}}>
+      <div style={{flex:1,marginRight:'12px',display:'flex',flexDirection:'column',justifyContent:'center'}}>
+        <div style={{fontSize:'15px',fontWeight:500,color:'#111111',marginBottom:'4px'}}>{item.name} {!isAvailable && '(หมด)'}</div>
+        {item.description && <div style={{fontSize:'13px',color:'#6B7280',marginBottom:'6px'}}>{item.description}</div>}
+        <div style={{fontSize:'15px',fontWeight:700,color:'#7C3AED'}}>฿{item.price}</div>
+      </div>
+      <div style={{width:'80px',height:'80px',borderRadius:'10px',overflow:'hidden',flexShrink:0,position:'relative',background:'#F3F4F6',display:'flex',alignItems:'center',justifyContent:'center'}}>
         {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+          <img src={item.imageUrl} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
         ) : (
-          <span style={{ fontSize: "48px" }}>{item.emoji}</span>
+          <div style={{fontSize:'36px'}}>{item.emoji}</div>
         )}
-
-        {/* Unavailable Overlay */}
-        {sold && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.5)", backdropFilter: "blur(2px)" }}>
-            <span className="bg-white/90 text-gray-800 px-3 py-1 rounded-full text-xs font-bold shadow-sm">หมด</span>
+        
+        {qty > 0 && (
+          <div style={{position:'absolute',top:'4px',right:'4px',background:'#7C3AED',color:'white',width:'20px',height:'20px',borderRadius:'10px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:700}}>
+            {qty}
           </div>
         )}
-      </div>
 
-      {/* Body */}
-      <div className="flex flex-col flex-1 justify-between gap-2" style={{ padding: "10px 12px" }}>
-        <div>
-          <p className="text-[13px] font-semibold leading-tight line-clamp-2" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-        </div>
-
-        <div className="flex items-center justify-between mt-auto">
-          <p className="text-[14px] font-bold" style={{ color: "var(--primary)" }}>฿{item.price}</p>
-
-          {!sold && (
-            <div className="flex items-center gap-2">
-              {qty > 0 ? (
-                <div className="flex items-center bg-[var(--bg-secondary)] rounded-full p-0.5 border border-[var(--border)]">
-                  <button
-                    onClick={() => onRemove(item)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center bg-white text-gray-700 font-bold active:scale-95 shadow-sm"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center text-xs font-bold">{qty}</span>
-                  <button
-                    onClick={() => onAdd(item)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold active:scale-95 shadow-sm"
-                    style={{ background: "var(--primary-gradient)" }}
-                  >
-                    +
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => onAdd(item)}
-                  className="w-[26px] h-[26px] rounded-lg text-white flex items-center justify-center text-lg leading-none active:scale-90 transition-transform"
-                  style={{ background: "var(--primary-gradient)", borderRadius: "8px" }}
-                >
-                  +
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {isAvailable && (
+          <button 
+            onClick={() => onAdd(item)}
+            style={{position:'absolute',bottom:'4px',right:'4px',width:'28px',height:'28px',borderRadius:'14px',background:'#7C3AED',color:'white',border:'none',fontSize:'18px',display:'flex',alignItems:'center',justifyContent:'center',paddingBottom:'2px'}}
+          >
+            +
+          </button>
+        )}
       </div>
     </div>
-  );
+  )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Cart Drawer (Bottom Sheet)
-// ─────────────────────────────────────────────────────────────────────────────
 function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, submitting }) {
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ background: "rgba(26,26,46,0.4)", backdropFilter: "blur(4px)" }} onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white flex flex-col shadow-2xl"
-           style={{ borderRadius: "24px 24px 0 0", padding: "20px", maxHeight: "85vh" }}>
-
-        {/* Handle */}
-        <div className="mx-auto mb-4" style={{ width: "36px", height: "4px", background: "rgba(108,99,255,0.2)", borderRadius: "2px" }} />
-
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg" style={{ fontFamily: "'DM Serif Display', serif", color: "var(--text-primary)" }}>
-            รายการออเดอร์
-          </h2>
-          <button onClick={onClose} className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center">×</button>
+      <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',zIndex:40}} onClick={onClose} />
+      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:50,maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'12px',display:'flex',justifyContent:'center'}}>
+          <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
         </div>
-
-        <div className="overflow-y-auto flex-1 space-y-4 pb-4 no-scrollbar">
-          {/* Items */}
+        <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>รายการที่สั่ง</h2>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
+        </div>
+        <div style={{overflowY:'auto',flex:1,padding:'0 16px',paddingBottom:'24px',display:'flex',flexDirection:'column',gap:'16px'}}>
           {cartItems.map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="text-3xl w-10 text-center select-none">{item.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold truncate text-gray-800">{item.name}</p>
-                <p className="text-[13px] font-bold" style={{ color: "var(--primary)" }}>฿{item.price * item.qty}</p>
+            <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:'15px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{item.price * item.qty}</div>
               </div>
-              <div className="font-bold text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-lg">
-                x{item.qty}
+              <div style={{display:'flex',alignItems:'center',gap:'12px',background:'#F3F4F6',padding:'4px',borderRadius:'20px'}}>
+                <button onClick={() => item.onRemove(item)} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>−</button>
+                <div style={{fontSize:'14px',fontWeight:600}}>{item.qty}</div>
+                <button onClick={() => item.onAdd(item)} style={{width:'28px',height:'28px',borderRadius:'14px',background:'white',border:'none',fontWeight:600}}>+</button>
               </div>
             </div>
           ))}
-
-          {/* Note Input */}
-          <div className="pt-2">
+          
+          <div style={{marginTop:'8px'}}>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="หมายเหตุ: เผ็ดน้อย, ไม่ใส่ผักชี..."
+              placeholder="หมายเหตุ (ถ้ามี)"
+              style={{width:'100%',padding:'12px',border:'1px solid #E5E7EB',borderRadius:'10px',fontSize:'14px',resize:'none',outline:'none'}}
               rows={2}
-              className="w-full text-sm outline-none resize-none transition-colors"
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)",
-                padding: "10px",
-                fontFamily: "'DM Sans', sans-serif"
-              }}
             />
           </div>
-
-          <div className="flex justify-between items-center py-2 border-t border-gray-100">
-            <span className="text-sm text-gray-500">รวมทั้งหมด</span>
-            <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>฿{totalPrice}</span>
+          
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid #F3F4F6',paddingTop:'16px'}}>
+            <span style={{fontSize:'15px',color:'#374151'}}>รวมทั้งหมด</span>
+            <span style={{fontSize:'18px',fontWeight:700,color:'#7C3AED'}}>฿{totalPrice}</span>
           </div>
+          
+          <button 
+            onClick={onSubmit}
+            disabled={submitting}
+            style={{width:'100%',padding:'16px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'16px',opacity:submitting ? 0.7 : 1}}
+          >
+            {submitting ? 'กำลังส่ง...' : 'ยืนยันสั่งอาหาร'}
+          </button>
         </div>
-
-        <button
-          onClick={onSubmit}
-          disabled={submitting}
-          className="w-full mt-2 font-bold text-white transition-transform active:scale-95 disabled:opacity-70 flex justify-center items-center h-[52px]"
-          style={{ background: "var(--primary-gradient)", borderRadius: "var(--radius-md)" }}
-        >
-          {submitting ? "กำลังส่ง..." : "ยืนยันการสั่งอาหาร"}
-        </button>
       </div>
     </>
-  );
+  )
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Page
-// ─────────────────────────────────────────────────────────────────────────────
 function MenuPageInner() {
   const searchParams = useSearchParams();
   const table = searchParams.get("table") ?? "?";
@@ -217,23 +133,15 @@ function MenuPageInner() {
     return () => unsubscribe(); // cleanup on unmount
   }, []);
 
-  // ── Derived state ─────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (activeCategory === "all") return menuItems;
-    return menuItems.filter((i) => i.category === activeCategory);
-  }, [menuItems, activeCategory]);
+  const cartValues = Object.values(cart);
+  const totalItems = cartValues.reduce((s, i) => s + i.qty, 0);
+  const totalPrice = cartValues.reduce((s, i) => s + i.price * i.qty, 0);
+  const hasCart = totalItems > 0;
 
-  const cartValues   = Object.values(cart);
-  const totalItems   = cartValues.reduce((s, i) => s + i.qty, 0);
-  const totalPrice   = cartValues.reduce((s, i) => s + i.price * i.qty, 0);
-  const hasCart      = totalItems > 0;
-
-  // Close cart if empty
   useEffect(() => {
     if (!hasCart && showCart) setShowCart(false);
   }, [hasCart, showCart]);
 
-  // ── Cart helpers ──────────────────────────────────────────────────────────
   const addToCart = (item) =>
     setCart((prev) => ({
       ...prev,
@@ -253,7 +161,6 @@ function MenuPageInner() {
       return { ...prev, [item.id]: { ...current, qty: current.qty - 1 } };
     });
 
-  // ── Submit order ──────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!hasCart || submitting) return;
     setSubmitting(true);
@@ -275,133 +182,129 @@ function MenuPageInner() {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // Group menu by category
+  const categoriesToRender = useMemo(() => {
+    if (activeCategory !== 'all') {
+      return [{
+        id: activeCategory,
+        label: CATEGORIES[activeCategory] || activeCategory,
+        items: menuItems.filter(i => i.category === activeCategory)
+      }];
+    }
+    
+    // activeCategory === 'all'
+    const grouped = {};
+    Object.keys(CATEGORIES).forEach(k => grouped[k] = []);
+    menuItems.forEach(item => {
+      if (grouped[item.category]) {
+        grouped[item.category].push(item);
+      } else {
+        if (!grouped['other']) grouped['other'] = [];
+        grouped['other'].push(item);
+      }
+    });
+    
+    return Object.keys(grouped).filter(k => grouped[k].length > 0).map(k => ({
+      id: k,
+      label: CATEGORIES[k] || 'อื่นๆ',
+      items: grouped[k]
+    }));
+  }, [menuItems, activeCategory]);
+
   return (
-    <div className="min-h-[100dvh] bg-[var(--bg)] flex flex-col relative w-full overflow-x-hidden">
-
-      {/* ── Header Area ────────────────────────────────────────────────────── */}
-      <div className="relative w-full z-20" style={{ background: "var(--primary-gradient)", padding: "20px 16px 36px" }}>
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-white m-0 leading-none" style={{ fontFamily: "'DM Serif Display', serif", fontSize: "18px" }}>
-              ร้านแม่
-            </h1>
-            <span
-              className="px-3 py-1 text-white font-medium"
-              style={{
-                fontSize: "12px",
-                borderRadius: "20px",
-                background: "rgba(255,255,255,0.2)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.3)"
-              }}
-            >
-              โต๊ะ {table}
-            </span>
-          </div>
-
-          <button
-            onClick={() => hasCart && setShowCart(true)}
-            className="relative flex items-center justify-center h-9 w-9 active:scale-95 transition-transform"
-            style={{
-              borderRadius: "var(--radius-sm)",
-              background: "rgba(255,255,255,0.2)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.3)"
-            }}
-          >
-            <span className="text-lg">🛒</span>
+    <div style={{minHeight:'100vh',paddingBottom:hasCart ? '80px' : '0',position:'relative'}}>
+      <div style={{position:'sticky',top:0,zIndex:30}}>
+        {/* HEADER */}
+        <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>ร้านแม่ <span style={{fontSize:'13px',color:'#6B7280',fontWeight:400,marginLeft:'4px'}}>โต๊ะ {table}</span></div>
+          <button onClick={() => hasCart && setShowCart(true)} style={{position:'relative',background:'none',border:'none',fontSize:'24px',color:'#7C3AED'}}>
+            🛒
             {hasCart && (
-              <span className="absolute -top-1 -right-1 flex items-center justify-center text-white"
-                    style={{ background: "#FF6B6B", width: "16px", height: "16px", borderRadius: "50%", fontSize: "10px", fontWeight: "bold" }}>
+              <div style={{position:'absolute',top:'-4px',right:'-6px',background:'#7C3AED',color:'white',width:'18px',height:'18px',borderRadius:'9px',fontSize:'10px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {totalItems}
-              </span>
+              </div>
             )}
           </button>
         </div>
 
-        {/* ── Category Filter Bar ──────────────────────────────────────── */}
-        <div className="w-full mt-5 max-w-md mx-auto">
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar" style={{ scrollSnapType: "x mandatory" }}>
-            {[["all", "ทั้งหมด"], ...Object.entries(CATEGORIES)].map(([key, label]) => {
-              const isActive = activeCategory === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setCategory(key)}
-                  className="whitespace-nowrap transition-all flex-shrink-0"
-                  style={{
-                    padding: "5px 14px",
-                    fontSize: "12px",
-                    borderRadius: "20px",
-                    scrollSnapAlign: "start",
-                    background: isActive ? "white" : "rgba(255,255,255,0.15)",
-                    color: isActive ? "var(--primary)" : "rgba(255,255,255,0.85)",
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        {/* CATEGORY BAR */}
+        <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'48px',display:'flex',alignItems:'center',padding:'0 16px',gap:'8px',overflowX:'auto',scrollbarWidth:'none'}}>
+          <button 
+            onClick={() => setCategory('all')}
+            style={{padding:'6px 16px',borderRadius:'20px',fontSize:'13px',fontWeight:500,border:'none',whiteSpace:'nowrap',
+              background: activeCategory === 'all' ? '#7C3AED' : '#F3F4F6',
+              color: activeCategory === 'all' ? 'white' : '#374151'
+            }}
+          >ทั้งหมด</button>
+          {Object.entries(CATEGORIES).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setCategory(key)}
+              style={{padding:'6px 16px',borderRadius:'20px',fontSize:'13px',fontWeight:500,border:'none',whiteSpace:'nowrap',
+                background: activeCategory === key ? '#7C3AED' : '#F3F4F6',
+                color: activeCategory === key ? 'white' : '#374151'
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Content Area ──────────────────────────────────────────────────── */}
-      <main className="flex-1 w-full mx-auto max-w-md bg-[var(--bg)] relative z-10 px-4 pb-32"
-            style={{ marginTop: "-20px", borderRadius: "20px 20px 0 0", paddingTop: "16px" }}>
-
+      <div style={{background:'white'}}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-8 h-8 rounded-full animate-spin"
-                 style={{ border: "3px solid var(--border)", borderTopColor: "var(--primary)" }} />
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>กำลังโหลดเมนู...</p>
+          <div style={{padding:'24px 16px'}}>
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} style={{display:'flex',marginBottom:'16px'}}>
+                <div style={{flex:1,marginRight:'12px'}}>
+                  <div style={{height:'18px',background:'#F3F4F6',borderRadius:'4px',width:'60%',marginBottom:'8px',animation:'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} />
+                  <div style={{height:'14px',background:'#F3F4F6',borderRadius:'4px',width:'40%',animation:'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} />
+                </div>
+                <div style={{width:'80px',height:'80px',background:'#F3F4F6',borderRadius:'10px',animation:'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} />
+              </div>
+            ))}
+            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }`}</style>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-[10px]">
-            {filtered.map((item) => (
-              <MenuItemCard
-                key={item.id}
-                item={item}
-                qty={cart[item.id]?.qty ?? 0}
-                onAdd={addToCart}
-                onRemove={removeFromCart}
-              />
-            ))}
-          </div>
-        )}
-
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-20 text-sm" style={{ color: "var(--text-muted)" }}>
-            ไม่มีรายการเมนูในหมวดหมู่นี้
-          </div>
-        )}
-      </main>
-
-      {/* ── View Cart Floating Bar ────────────────────────────────────────── */}
-      {hasCart && !showCart && (
-        <div className="fixed bottom-6 left-0 right-0 z-30 px-4 flex justify-center">
-          <button
-            onClick={() => setShowCart(true)}
-            className="w-full max-w-md h-14 flex items-center justify-between px-5 text-white shadow-lg active:scale-[0.98] transition-all"
-            style={{ background: "var(--text-primary)", borderRadius: "var(--radius-xl)", boxShadow: "0 8px 24px rgba(26,26,46,0.2)" }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{ background: "rgba(255,255,255,0.2)" }}>
-                {totalItems}
-              </div>
-              <span className="font-semibold text-[15px]">ดูออเดอร์</span>
+          categoriesToRender.map(cat => (
+            <div key={cat.id}>
+              {activeCategory === 'all' && cat.items.length > 0 && (
+                <div style={{background:'#FAFAFA',padding:'12px 16px 6px',fontSize:'12px',fontWeight:600,color:'#7C3AED',textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                  {cat.label}
+                </div>
+              )}
+              {cat.items.map(item => (
+                <MenuItemCard 
+                  key={item.id} 
+                  item={item} 
+                  qty={cart[item.id]?.qty || 0}
+                  onAdd={addToCart}
+                  onRemove={removeFromCart}
+                />
+              ))}
             </div>
-            <span className="font-bold text-[15px]">฿{totalPrice}</span>
+          ))
+        )}
+      </div>
+
+      {hasCart && !showCart && (
+        <div style={{position:'fixed',bottom:'16px',left:'16px',right:'16px',zIndex:30}}>
+          <button 
+            onClick={() => setShowCart(true)}
+            style={{width:'100%',background:'#7C3AED',color:'white',padding:'16px',borderRadius:'16px',border:'none',display:'flex',alignItems:'center',justifyContent:'space-between',boxShadow:'0 4px 12px rgba(124,58,237,0.3)',fontWeight:600,fontSize:'16px'}}
+          >
+            <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+              <div style={{background:'rgba(255,255,255,0.2)',padding:'2px 8px',borderRadius:'12px',fontSize:'14px'}}>{totalItems}</div>
+              ดูออเดอร์
+            </div>
+            <span>฿{totalPrice}</span>
           </button>
         </div>
       )}
 
-      {/* ── Contextual Nav/Modals ───────────────────────────────────────── */}
       {showCart && (
         <CartDrawer
-          cartItems={cartValues}
+          cartItems={cartValues.map(i => ({...i, onAdd: addToCart, onRemove: removeFromCart}))}
           totalPrice={totalPrice}
           note={note}
           setNote={setNote}
@@ -411,17 +314,14 @@ function MenuPageInner() {
         />
       )}
 
-      {showSuccess && (
-        <SuccessModal onClose={() => setShowSuccess(false)} />
-      )}
-
+      {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
     </div>
-  );
+  )
 }
 
 export default function MenuPage() {
   return (
-    <Suspense fallback={<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#F8F7FF'}}><div style={{textAlign:'center',color:'#a78bfa'}}><div style={{fontSize:32}}>🍜</div><div>กำลังโหลด...</div></div></div>}>
+    <Suspense fallback={<div style={{padding:'24px',textAlign:'center',color:'#6B7280'}}>กำลังโหลด...</div>}>
       <MenuPageInner />
     </Suspense>
   )

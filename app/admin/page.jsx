@@ -13,24 +13,19 @@ import {
 import { generatePromptPayPayload } from "@/lib/promptpay";
 import { CATEGORIES } from "@/data/menu";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Config
-// ─────────────────────────────────────────────────────────────────────────────
 const PROMPTPAY_PHONE = "0637305219";
 const NUM_TABLES = 8;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
     const map = {
-        pending: { label: "รอชำระ",  bg: "rgba(255, 107, 107, 0.15)", text: "var(--warning)" },
-        paid:    { label: "จ่ายแล้ว", bg: "rgba(74, 222, 128, 0.15)", text: "var(--success)" },
-        done:    { label: "ปิดแล้ว",  bg: "rgba(107, 107, 138, 0.15)", text: "var(--text-secondary)" },
+        pending: { label: "รอชำระ",  bg: "#FEF3C7", text: "#D97706" },
+        paid:    { label: "จ่ายแล้ว", bg: "#D1FAE5", text: "#059669" },
+        done:    { label: "ปิดแล้ว",  bg: "#F3F4F6", text: "#6B7280" },
     };
-    const { label, bg, text } = map[status] ?? map.pending;
+    const { label, bg, text } = map[status] || { label: "ว่าง", bg: "#F3F4F6", text: "#6B7280" };
     return (
-        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: bg, color: text }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '12px', background: bg, color: text }}>
             {label}
         </span>
     );
@@ -42,7 +37,6 @@ function formatTime(ts) {
     return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
 }
 
-/** Merge items from multiple orders — sum qty for identical names */
 function mergeItems(orders) {
     const map = {};
     for (const order of orders) {
@@ -57,9 +51,6 @@ function mergeItems(orders) {
     return Object.values(map);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PromptPay QR canvas component
-// ─────────────────────────────────────────────────────────────────────────────
 function PromptPayQR({ amount, phone }) {
     const canvasRef = useRef(null);
 
@@ -71,25 +62,19 @@ function PromptPayQR({ amount, phone }) {
             QRCode.toCanvas(canvasRef.current, payload, {
                 width:  200,
                 margin: 2,
-                color: { dark: "#1a1a2e", light: "#FFFFFF" },
+                color: { dark: "#111111", light: "#EDE9FE" },
             });
         });
     }, [amount, phone]);
 
     return (
-        <div className="flex flex-col items-center gap-2 py-4">
-            <div className="p-3 bg-white rounded-2xl shadow-sm" style={{ border: "1px solid var(--border)" }}>
-                <canvas ref={canvasRef} className="rounded-xl" />
-            </div>
-            <p className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>พร้อมเพย์ · {phone}</p>
-            <p className="text-3xl font-bold" style={{ color: "var(--primary)" }}>฿{amount.toLocaleString()}</p>
+        <div style={{background:'#EDE9FE',borderRadius:'12px',padding:'16px',display:'flex',flexDirection:'column',alignItems:'center'}}>
+            <canvas ref={canvasRef} style={{borderRadius:'8px'}} />
+            <p style={{marginTop:'8px',fontSize:'13px',color:'#7C3AED',fontWeight:600}}>สแกนเพื่อจ่าย ฿{amount.toLocaleString()}</p>
         </div>
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Table Modal (bottom sheet)
-// ─────────────────────────────────────────────────────────────────────────────
 function TableModal({ tableNum, orders, onClose, onPaid, onDone }) {
     const items      = useMemo(() => mergeItems(orders), [orders]);
     const grandTotal = orders.reduce((s, o) => s + (o.total ?? 0), 0);
@@ -97,125 +82,86 @@ function TableModal({ tableNum, orders, onClose, onPaid, onDone }) {
 
     return (
         <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 z-40" style={{ background: "rgba(26,26,46,0.4)", backdropFilter: "blur(4px)" }} onClick={onClose} />
-
-            {/* Sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white flex flex-col shadow-2xl"
-                 style={{ borderRadius: "24px 24px 0 0", maxHeight: "90vh" }}>
-                {/* Handle */}
-                <div className="flex justify-center pt-4 pb-2">
-                    <div style={{ width: "36px", height: "4px", background: "rgba(108,99,255,0.2)", borderRadius: "2px" }} />
+            <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',zIndex:40}} onClick={onClose} />
+            <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:50,maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
+                <div style={{padding:'12px',display:'flex',justifyContent:'center'}}>
+                    <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
                 </div>
-
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 pb-4">
-                    <h2 className="text-xl" style={{ fontFamily: "'DM Serif Display', serif", color: "var(--text-primary)" }}>
-                        โต๊ะ {tableNum} — รายการทั้งหมด
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 text-2xl leading-none w-8 h-8 flex items-center justify-center -mr-2"
-                    >
-                        ×
-                    </button>
+                
+                <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>โต๊ะ {tableNum}</h2>
+                    <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
                 </div>
-
-                {/* Scrollable body */}
-                <div className="overflow-y-auto flex-1 px-6 space-y-3 pb-6 no-scrollbar">
-                    {/* Item list */}
+                
+                <div style={{overflowY:'auto',flex:1,padding:'0 16px 24px'}}>
                     {items.map((item, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2 border-b" style={{ borderColor: "var(--border)" }}>
-                            <span className="text-2xl w-10 text-center">{item.emoji}</span>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[14px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.qty} × ฿{item.price}</p>
+                        <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F3F4F6'}}>
+                            <div style={{flex:1}}>
+                                <div style={{fontSize:'14px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                                <div style={{fontSize:'13px',color:'#6B7280'}}>{item.qty} × ฿{item.price}</div>
                             </div>
-                            <p className="text-[15px] font-bold" style={{ color: "var(--primary)" }}>฿{item.qty * item.price}</p>
+                            <div style={{fontSize:'14px',fontWeight:600,color:'#111111'}}>฿{item.qty * item.price}</div>
                         </div>
                     ))}
-
-                    {/* Notes */}
+                    
                     {notes.length > 0 && (
-                        <div className="rounded-xl p-3 mt-4" style={{ background: "rgba(255, 107, 107, 0.05)", border: "1px solid rgba(255, 107, 107, 0.1)" }}>
-                            <p className="text-xs font-bold mb-1" style={{ color: "var(--warning)" }}>หมายเหตุ</p>
-                            {notes.map((n, i) => <p key={i} className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{n}</p>)}
+                        <div style={{background:'#FFFBEB',padding:'12px',borderRadius:'8px',marginTop:'16px'}}>
+                            <div style={{fontSize:'12px',fontWeight:600,color:'#D97706',marginBottom:'4px'}}>หมายเหตุ</div>
+                            {notes.map((n, i) => <div key={i} style={{fontSize:'13px',color:'#92400E'}}>{n}</div>)}
                         </div>
                     )}
-
-                    {/* Grand total */}
-                    <div className="flex justify-between items-center py-4">
-                        <p className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>รวมทั้งหมด</p>
-                        <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>฿{grandTotal}</p>
+                    
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'24px',marginBottom:'24px'}}>
+                        <span style={{fontSize:'15px',color:'#374151'}}>รวมทั้งหมด</span>
+                        <span style={{fontSize:'24px',fontWeight:700,color:'#7C3AED'}}>฿{grandTotal.toLocaleString()}</span>
                     </div>
-
-                    {/* PromptPay QR */}
-                    <div className="rounded-2xl overflow-hidden mt-2 p-4 flex flex-col items-center justify-center bg-[var(--bg)]" style={{ border: "1px solid var(--border)" }}>
-                        <p className="text-center text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>สแกนรับชำระเงิน</p>
-                        <PromptPayQR amount={grandTotal} phone={PROMPTPAY_PHONE} />
+                    
+                    {orders.some(o => o.status === 'pending') && (
+                        <div style={{display:'flex',justifyContent:'center',marginBottom:'24px'}}>
+                            <PromptPayQR amount={grandTotal} phone={PROMPTPAY_PHONE} />
+                        </div>
+                    )}
+                    
+                    <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                        <button onClick={onPaid} style={{width:'100%',padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>รับชำระ</button>
+                        <button onClick={onDone} style={{width:'100%',padding:'14px',background:'white',color:'#10B981',borderRadius:'12px',border:'1.5px solid #10B981',fontWeight:600,fontSize:'15px'}}>ปิดโต๊ะ</button>
+                        <button onClick={onClose} style={{width:'100%',padding:'14px',background:'#F3F4F6',color:'#6B7280',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px'}}>ปิด</button>
                     </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="px-6 pb-8 pt-4 border-t flex gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                    <button
-                        onClick={onDone}
-                        className="flex-1 py-3.5 rounded-xl font-bold text-[14px] active:scale-95 transition-all text-gray-500"
-                        style={{ border: "1px solid var(--border)", background: "transparent" }}
-                    >
-                        ปิดโต๊ะ
-                    </button>
-                    <button
-                        onClick={onPaid}
-                        className="flex-[2] py-3.5 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all shadow-md"
-                        style={{ background: "linear-gradient(135deg, #4ade80, #22c55e)" }}
-                    >
-                        รับชำระแล้ว ✓
-                    </button>
                 </div>
             </div>
         </>
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// History Detail Modal
-// ─────────────────────────────────────────────────────────────────────────────
 function HistoryModal({ order, onClose }) {
     if (!order) return null;
     return (
         <>
-            <div className="fixed inset-0 z-40" style={{ background: "rgba(26,26,46,0.4)", backdropFilter: "blur(4px)" }} onClick={onClose} />
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white flex flex-col shadow-2xl"
-                 style={{ borderRadius: "24px 24px 0 0", maxHeight: "85vh" }}>
-                <div className="flex justify-center pt-4 pb-2">
-                    <div style={{ width: "36px", height: "4px", background: "rgba(108,99,255,0.2)", borderRadius: "2px" }} />
+            <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',zIndex:40}} onClick={onClose} />
+            <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:50,maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
+                <div style={{padding:'12px',display:'flex',justifyContent:'center'}}>
+                    <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
                 </div>
-                <div className="flex items-center justify-between px-6 pb-4">
-                    <h2 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-                        โต๊ะ {order.table} <span className="text-gray-400 font-normal ml-2 text-sm">{formatTime(order.createdAt)}</span>
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center -mr-2">×</button>
+                <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>โต๊ะ {order.table} <span style={{fontSize:'13px',fontWeight:400,color:'#6B7280',marginLeft:'8px'}}>{formatTime(order.createdAt)}</span></h2>
+                    <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
                 </div>
-                <div className="overflow-y-auto flex-1 px-6 space-y-3 pb-8 no-scrollbar">
+                <div style={{overflowY:'auto',flex:1,padding:'0 16px 24px'}}>
                     {(order.items ?? []).map((item, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2 border-b" style={{ borderColor: "var(--border)" }}>
-                            <span className="text-2xl w-10 text-center">{item.emoji}</span>
-                            <div className="flex-1">
-                                <p className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>{item.name}</p>
-                                <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.qty} × ฿{item.price}</p>
+                        <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F3F4F6'}}>
+                            <div style={{flex:1}}>
+                                <div style={{fontSize:'14px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                                <div style={{fontSize:'13px',color:'#6B7280'}}>{item.qty} × ฿{item.price}</div>
                             </div>
-                            <p className="text-[15px] font-bold" style={{ color: "var(--primary)" }}>฿{item.qty * item.price}</p>
+                            <div style={{fontSize:'14px',fontWeight:600,color:'#111111'}}>฿{item.qty * item.price}</div>
                         </div>
                     ))}
                     {order.note && (
-                        <div className="rounded-xl p-3 mt-4" style={{ background: "rgba(255, 107, 107, 0.05)", border: "1px solid rgba(255, 107, 107, 0.1)" }}>
-                            <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{order.note}</p>
-                        </div>
+                        <div style={{background:'#F3F4F6',padding:'12px',borderRadius:'8px',marginTop:'16px',fontSize:'13px',color:'#374151'}}>{order.note}</div>
                     )}
-                    <div className="flex justify-between items-center pt-4 mt-2">
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'24px'}}>
                         <StatusBadge status={order.status} />
-                        <p className="font-bold text-2xl" style={{ color: "var(--primary)" }}>฿{order.total}</p>
+                        <span style={{fontSize:'20px',fontWeight:700,color:'#7C3AED'}}>฿{order.total.toLocaleString()}</span>
                     </div>
                 </div>
             </div>
@@ -223,7 +169,6 @@ function HistoryModal({ order, onClose }) {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 const EMOJI_OPTIONS = ["🍛","🍲","🍝","🍜","🍚","🍳","🥘","🫕","🥗","💧","🧊","🍹","🥤"];
 
 function AddMenuModal({ onClose }) {
@@ -282,164 +227,85 @@ function AddMenuModal({ onClose }) {
 
     return (
         <>
-            {/* Backdrop */}
-            <div className="fixed inset-0 z-40 transition-opacity" style={{ background: "rgba(26,26,46,0.6)", backdropFilter: "blur(6px)" }} onClick={!saving ? onClose : undefined} />
-
-            {/* Sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white flex flex-col shadow-2xl transition-transform"
-                 style={{ borderRadius: "24px 24px 0 0", maxHeight: "92vh" }}>
-                {/* Handle */}
-                <div className="flex justify-center pt-4 pb-2">
-                    <div style={{ width: "36px", height: "4px", background: "rgba(108,99,255,0.2)", borderRadius: "2px" }} />
+            <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.5)',zIndex:40}} onClick={!saving ? onClose : undefined} />
+            <div style={{position:'fixed',bottom:0,left:0,right:0,background:'white',borderRadius:'20px 20px 0 0',zIndex:50,maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
+                <div style={{padding:'12px',display:'flex',justifyContent:'center'}}>
+                    <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
                 </div>
-
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 pb-2">
-                    <h2 className="text-xl" style={{ fontFamily: "'DM Serif Display', serif", color: "var(--text-primary)" }}>+ เพิ่มเมนูใหม่</h2>
-                    <button
-                        onClick={onClose}
-                        disabled={saving}
-                        className="text-gray-400 text-2xl w-8 h-8 flex items-center justify-center disabled:opacity-40 -mr-2"
-                    >
-                        ×
-                    </button>
+                <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>เพิ่มเมนูใหม่</h2>
+                    <button onClick={onClose} disabled={saving} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
                 </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 pb-6 mt-4 space-y-5 no-scrollbar">
-
-                    {/* Image upload */}
+                
+                <form onSubmit={handleSubmit} style={{overflowY:'auto',flex:1,padding:'0 16px 24px',display:'flex',flexDirection:'column',gap:'16px'}}>
                     <div>
-                        <label className="block text-[13px] font-bold mb-2 uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>รูปภาพ (ถ้ามี)</label>
-                        <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 text-sm active:scale-[0.98] transition-all overflow-hidden relative"
-                            style={{ borderColor: "var(--border)", background: "rgba(108,99,255,0.02)", color: "var(--text-muted)" }}
-                        >
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>รูปภาพ (ถ้ามี)</label>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} style={{width:'100%',height:'120px',borderRadius:'12px',border:'2px dashed #E5E7EB',background:'#FAFAFA',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden',color:'#6B7280'}}>
                             {preview ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={preview} alt="preview" className="absolute inset-0 w-full h-full object-cover" />
+                                <img src={preview} alt="preview" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover'}} />
                             ) : (
                                 <>
-                                    <span className="text-3xl mb-1">📷</span>
-                                    <span className="font-medium">แตะเพื่อเลือกรูป</span>
+                                    <div style={{fontSize:'24px'}}>📷</div>
+                                    <div style={{fontSize:'13px'}}>แตะเพื่อเลือกรูป</div>
                                 </>
                             )}
                         </button>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
+                        <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleFileChange} />
                     </div>
 
-                    {/* Emoji picker */}
                     <div>
-                        <label className="block text-[13px] font-bold mb-2 uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>Emoji</label>
-                        <div className="flex flex-wrap gap-2">
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>Emoji</label>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
                             {EMOJI_OPTIONS.map((em) => (
-                                <button
-                                    key={em}
-                                    type="button"
-                                    onClick={() => setEmoji(em)}
-                                    className={`text-2xl w-12 h-12 rounded-xl border-2 transition-all flex items-center justify-center`}
-                                    style={emoji === em ? { borderColor: "var(--primary)", background: "var(--bg-secondary)", transform: "scale(1.05)" } : { borderColor: "var(--border)", background: "var(--surface)" }}
-                                >
+                                <button key={em} type="button" onClick={() => setEmoji(em)} style={{fontSize:'20px',width:'44px',height:'44px',borderRadius:'12px',border: emoji === em ? '2px solid #7C3AED' : '1px solid #E5E7EB',background: emoji === em ? '#EDE9FE' : 'white',display:'flex',alignItems:'center',justifyContent:'center'}}>
                                     {em}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Name */}
                     <div>
-                        <label className="block text-[13px] font-bold mb-2 uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>ชื่อเมนู *</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="เช่น ข้าวราดกะเพรา"
-                            className="w-full rounded-xl px-4 py-3.5 text-[15px] outline-none transition-all placeholder:text-gray-300"
-                            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-primary)" }}
-                        />
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>ชื่อเมนู *</label>
+                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น ข้าวราดกะเพรา" style={{width:'100%',borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
                     </div>
 
-                    {/* Price */}
                     <div>
-                        <label className="block text-[13px] font-bold mb-2 uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>ราคา (บาท) *</label>
-                        <input
-                            type="number"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                            placeholder="50"
-                            min="1"
-                            className="w-full rounded-xl px-4 py-3.5 text-[15px] outline-none transition-all placeholder:text-gray-300"
-                            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-primary)" }}
-                        />
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>ราคา (บาท) *</label>
+                        <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="50" min="1" style={{width:'100%',borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
                     </div>
 
-                    {/* Category */}
                     <div>
-                        <label className="block text-[13px] font-bold mb-2 uppercase tracking-wide" style={{ color: "var(--text-secondary)" }}>หมวดหมู่ *</label>
-                        <select
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            className="w-full rounded-xl px-4 py-3.5 text-[15px] outline-none transition-all"
-                            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-primary)" }}
-                        >
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>หมวดหมู่ *</label>
+                        <select value={category} onChange={(e) => setCategory(e.target.value)} style={{width:'100%',borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none',background:'white'}}>
                             {Object.entries(CATEGORIES).map(([key, label]) => (
                                 <option key={key} value={key}>{label}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* Error */}
-                    {error && (
-                        <p className="text-[13px] font-semibold p-3 rounded-xl mt-2" style={{ color: "var(--warning)", background: "rgba(255, 107, 107, 0.1)" }}>{error}</p>
-                    )}
-                </form>
+                    {error && <div style={{fontSize:'13px',fontWeight:600,color:'#EF4444',padding:'12px',background:'#FEF2F2',borderRadius:'8px'}}>{error}</div>}
 
-                {/* Submit */}
-                <div className="px-6 pb-8 pt-4 border-t" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="w-full py-4 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-md"
-                        style={{ background: "var(--primary-gradient)" }}
-                    >
-                        {saving ? (
-                            <>
-                                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                กำลังอัปโหลด...
-                            </>
-                        ) : (
-                            "บันทึกเมนู"
-                        )}
-                    </button>
-                </div>
+                    <div style={{paddingTop:'8px'}}>
+                        <button type="submit" disabled={saving} style={{width:'100%',padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px',opacity: saving ? 0.7 : 1}}>
+                            {saving ? 'กำลังบันทึก...' : 'บันทึกเมนู'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </>
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
-// ─────────────────────────────────────────────────────────────────────────────
 export default function AdminPage() {
     const [activeTab,     setActiveTab]     = useState("tables");
     const [activeOrders,  setActiveOrders]  = useState([]);
     const [allOrders,     setAllOrders]     = useState([]);
     const [menuItems,     setMenuItems]     = useState([]);
     const [loading,       setLoading]       = useState(true);
-    const [selectedTable, setSelectedTable] = useState(null); // table number
-    const [historyOrder,  setHistoryOrder]  = useState(null); // order object
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [historyOrder,  setHistoryOrder]  = useState(null);
     const [showAddMenu,   setShowAddMenu]   = useState(false);
 
-    // ── Realtime listeners ─────────────────────────────────────────────────
     useEffect(() => {
         const unsub = listenToActiveOrders((orders) => {
             setActiveOrders(orders);
@@ -458,7 +324,6 @@ export default function AdminPage() {
         return () => unsub();
     }, []);
 
-    // ── Stats ──────────────────────────────────────────────────────────────
     const today = new Date().toDateString();
     const todayOrders = allOrders.filter((o) => {
         const d = o.createdAt?.toDate ? o.createdAt.toDate() : new Date(o.createdAt ?? 0);
@@ -469,7 +334,6 @@ export default function AdminPage() {
         .reduce((s, o) => s + (o.total ?? 0), 0);
     const pendingCount = activeOrders.filter((o) => o.status === "pending").length;
 
-    // ── Table helpers ──────────────────────────────────────────────────────
     function tableOrders(tableNum) {
         return activeOrders.filter((o) => o.table === tableNum);
     }
@@ -489,7 +353,6 @@ export default function AdminPage() {
         return names.length > 40 ? names.slice(0, 40) + "…" : names;
     }
 
-    // ── Order actions ──────────────────────────────────────────────────────
     async function handlePaid(tableNum) {
         const orders = tableOrders(tableNum);
         await Promise.all(orders.map((o) => updateOrderStatus(o.id, "paid")));
@@ -502,7 +365,6 @@ export default function AdminPage() {
         setSelectedTable(null);
     }
 
-    // ── Menu grouped ───────────────────────────────────────────────────────
     const menuGrouped = useMemo(() => {
         const groups = {};
         for (const item of menuItems) {
@@ -512,248 +374,142 @@ export default function AdminPage() {
         return groups;
     }, [menuItems]);
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Render
-    // ─────────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-[100dvh] bg-[var(--bg)] flex flex-col relative w-full overflow-x-hidden">
-
-            {/* ── Top Header & Stats Area ───────────────────────────────────── */}
-            <div className="relative w-full z-20" style={{ background: "var(--text-primary)", padding: "20px 16px 24px" }}>
-                <div className="max-w-md mx-auto">
-                    {/* Nav Bar */}
-                    <header className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-white m-0 leading-none" style={{ fontFamily: "'DM Serif Display', serif", fontSize: "20px" }}>
-                                ร้านแม่
-                            </h1>
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 font-medium"
-                                  style={{ background: "rgba(74, 222, 128, 0.15)", color: "var(--success)", borderRadius: "12px", fontSize: "11px", border: "1px solid rgba(74, 222, 128, 0.2)" }}>
-                                <span className="w-1.5 h-1.5 bg-[var(--success)] rounded-full animate-pulse" />
-                                LIVE
-                            </span>
-                        </div>
-                    </header>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-3">
-                        {[
-                            { label: "ออเดอร์", value: todayOrders.length, unit: "รายการ" },
-                            { label: "รายได้วันนี้",  value: `฿${revenue}`,      unit: ""       },
-                            { label: "รอชำระ",        value: pendingCount,        unit: "โต๊ะ"  },
-                        ].map(({ label, value, unit }) => (
-                            <div key={label} className="rounded-2xl p-3 flex flex-col items-center justify-center text-center"
-                                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(8px)" }}>
-                                <p className="text-white font-bold text-xl leading-none mb-1">{value}</p>
-                                <p className="text-[10px] tracking-wide uppercase" style={{ color: "var(--text-muted)" }}>{label} {unit}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Tab Navigation */}
-                    <div className="flex bg-black/20 p-1 rounded-2xl mt-6">
-                        {[
-                            { key: "tables",  label: "Live Orders" },
-                            { key: "history", label: "History" },
-                            { key: "menu",    label: "Menu" },
-                        ].map(({ key, label }) => (
-                            <button
-                                key={key}
-                                onClick={() => setActiveTab(key)}
-                                className="flex-1 py-2 text-sm font-semibold rounded-xl transition-all"
-                                style={activeTab === key ? { background: "var(--surface)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" } : { color: "var(--text-muted)" }}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
+        <div style={{minHeight:'100vh',background:'#FAFAFA',paddingBottom:'80px'}}>
+            {/* TOP BAR */}
+            <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>แดชบอร์ด</div>
+                <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:600,color:'#10B981'}}>
+                    <div style={{width:'8px',height:'8px',borderRadius:'4px',background:'#10B981',animation:'pulse 2s infinite'}} />
+                    Live
                 </div>
             </div>
 
-            {/* ── Content Area ──────────────────────────────────────────────── */}
-            <main className="flex-1 w-full mx-auto max-w-md bg-[var(--bg)] relative z-10 px-4 pb-28 pt-6"
-                  style={{ marginTop: "-20px", borderRadius: "20px 20px 0 0" }}>
+            {/* STATS ROW */}
+            <div style={{display:'flex',padding:'12px 16px',background:'#FAFAFA',borderBottom:'1px solid #E5E7EB',gap:'12px'}}>
+                <div style={{flex:1,background:'white',padding:'12px',borderRadius:'12px',border:'1px solid #E5E7EB',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                    <div style={{fontSize:'11px',color:'#6B7280',marginBottom:'4px'}}>ออเดอร์</div>
+                    <div style={{fontSize:'22px',fontWeight:700,color:'#7C3AED'}}>{todayOrders.length}</div>
+                </div>
+                <div style={{flex:1,background:'white',padding:'12px',borderRadius:'12px',border:'1px solid #E5E7EB',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                    <div style={{fontSize:'11px',color:'#6B7280',marginBottom:'4px'}}>รายได้ (฿)</div>
+                    <div style={{fontSize:'22px',fontWeight:700,color:'#111111'}}>{revenue}</div>
+                </div>
+                <div style={{flex:1,background:'white',padding:'12px',borderRadius:'12px',border:'1px solid #E5E7EB',display:'flex',flexDirection:'column',alignItems:'center'}}>
+                    <div style={{fontSize:'11px',color:'#6B7280',marginBottom:'4px'}}>รอชำระ</div>
+                    <div style={{fontSize:'22px',fontWeight:700,color:'#EF4444'}}>{pendingCount}</div>
+                </div>
+            </div>
 
-                {/* ── TAB: โต๊ะ (Live Orders) ───────────────────────────────── */}
-                {activeTab === "tables" && (
-                    <div>
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                <div className="w-8 h-8 rounded-full animate-spin"
-                                     style={{ border: "3px solid var(--border)", borderTopColor: "var(--primary)" }} />
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-3">
-                                {Array.from({ length: NUM_TABLES }, (_, i) => i + 1).map((tableNum) => {
-                                    const orders = tableOrders(tableNum);
-                                    const status = tableStatus(orders);
-                                    const total  = tableTotal(orders);
-                                    const hasPending = orders.some((o) => o.status === "pending");
-                                    const hasNew = orders.some((o) => !o.items || o.items.length > 0); // Simplified new check
+            {/* TAB BAR */}
+            <div style={{display:'flex',background:'white',borderBottom:'1px solid #E5E7EB'}}>
+                <button onClick={() => setActiveTab('tables')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'tables' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'tables' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'tables' ? 600 : 500,fontSize:'15px'}}>โต๊ะ</button>
+                <button onClick={() => setActiveTab('history')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'history' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'history' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'history' ? 600 : 500,fontSize:'15px'}}>ประวัติ</button>
+                <button onClick={() => setActiveTab('menu')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'menu' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'menu' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'menu' ? 600 : 500,fontSize:'15px'}}>เมนู</button>
+            </div>
 
-                                    return (
-                                        <button
-                                            key={tableNum}
-                                            onClick={() => status !== "empty" && setSelectedTable(tableNum)}
-                                            disabled={status === "empty"}
-                                            className={`relative text-left rounded-2xl p-4 transition-all min-h-[120px] flex flex-col justify-between overflow-hidden shadow-sm hover:-translate-y-px
-                                                ${status === "empty" ? "bg-white/60 cursor-default" : "bg-white cursor-pointer active:scale-95"}
-                                            `}
-                                            style={{
-                                                border: status === "empty" ? "1px dashed rgba(108,99,255,0.15)"
-                                                      : status === "pending" ? "1px solid var(--warning)"
-                                                      : "1px solid var(--success)",
-                                                boxShadow: status === "pending" ? "0 4px 12px rgba(255, 107, 107, 0.15)" : "var(--shadow-sm)"
-                                            }}
-                                        >
-                                            {/* Top Row: Table Num & Badge */}
-                                            <div className="flex justify-between items-start w-full">
-                                                <p className={`text-[17px] font-bold ${status === "empty" ? "text-gray-400" : "text-gray-900"}`}>
-                                                    โต๊ะ {tableNum}
-                                                </p>
-                                                {status !== "empty" ? (
-                                                    <StatusBadge status={orders[0]?.status} />
-                                                ) : (
-                                                    <span className="text-[11px] font-medium text-gray-400 px-2.5 py-1 rounded-full bg-gray-50">ว่าง</span>
-                                                )}
-                                            </div>
+            <div style={{padding:'16px'}}>
+                {activeTab === 'tables' && (
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                        {loading ? <div style={{gridColumn:'1 / -1',textAlign:'center',padding:'32px',color:'#6B7280'}}>กำลังโหลด...</div> : (
+                            Array.from({ length: NUM_TABLES }, (_, i) => i + 1).map((tableNum) => {
+                                const orders = tableOrders(tableNum);
+                                const status = tableStatus(orders);
+                                const total  = tableTotal(orders);
 
-                                            {/* Middle/Bottom Row: Summary & Total */}
-                                            {status !== "empty" && (
-                                                <div className="mt-3">
-                                                    <p className="text-[12px] leading-tight mb-2 opacity-80 line-clamp-2" style={{ color: "var(--text-secondary)" }}>
-                                                        {tableSummary(orders)}
-                                                    </p>
-                                                    <p className="text-[16px] font-bold" style={{ color: "var(--primary)" }}>฿{total.toLocaleString()}</p>
-                                                </div>
-                                            )}
-
-                                            {/* Blinking Glow for Pending */}
-                                            {hasPending && (
-                                                <div className="absolute inset-0 border-2 rounded-2xl pointer-events-none animate-pulse" style={{ borderColor: "rgba(255, 107, 107, 0.4)" }} />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                return (
+                                    <button
+                                        key={tableNum}
+                                        onClick={() => status !== "empty" && setSelectedTable(tableNum)}
+                                        disabled={status === "empty"}
+                                        style={{
+                                            background:'white',
+                                            border:'1px solid #E5E7EB',
+                                            borderRadius:'12px',
+                                            padding:'12px',
+                                            display:'flex',
+                                            flexDirection:'column',
+                                            textAlign:'left',
+                                            borderLeft: status === 'pending' ? '3px solid #F59E0B' : status === 'paid' ? '3px solid #10B981' : '1px solid #E5E7EB',
+                                            opacity: status === 'empty' ? 0.6 : 1
+                                        }}
+                                    >
+                                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',width:'100%',marginBottom:'12px'}}>
+                                            <div style={{fontSize:'15px',fontWeight:700,color:'#111111'}}>โต๊ะ {tableNum}</div>
+                                            <StatusBadge status={status === 'empty' ? 'empty' : (status === 'pending' ? 'pending' : 'paid')} />
+                                        </div>
+                                        {status !== 'empty' && (
+                                            <>
+                                                <div style={{fontSize:'12px',color:'#6B7280',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',width:'100%'}}>{tableSummary(orders)}</div>
+                                                <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED',marginTop:'6px'}}>฿{total.toLocaleString()}</div>
+                                            </>
+                                        )}
+                                    </button>
+                                );
+                            })
                         )}
                     </div>
                 )}
 
-                {/* ── TAB: ประวัติ (History) ────────────────────────────────── */}
-                {activeTab === "history" && (
-                    <div className="space-y-3">
-                        {allOrders.length === 0 ? (
-                            <p className="text-center py-16 text-sm" style={{ color: "var(--text-muted)" }}>ยังไม่มีออเดอร์</p>
-                        ) : (
-                            allOrders.map((order) => (
-                                <button
-                                    key={order.id}
-                                    onClick={() => setHistoryOrder(order)}
-                                    className="w-full text-left bg-white rounded-2xl p-4 transition-all shadow-sm active:scale-[0.98]"
-                                    style={{ border: "1px solid var(--border)" }}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>โต๊ะ {order.table}</p>
-                                            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-gray-50" style={{ color: "var(--text-muted)" }}>
-                                                {formatTime(order.createdAt)}
-                                            </span>
+                {activeTab === 'history' && (
+                    <div>
+                        {allOrders.length === 0 ? <div style={{textAlign:'center',padding:'32px',color:'#6B7280'}}>ไม่มีประวัติออเดอร์</div> : (
+                            allOrders.sort((a,b)=>(b.createdAt?.toDate?.()||new Date()) - (a.createdAt?.toDate?.()||new Date())).map(order => (
+                                <button key={order.id} onClick={() => setHistoryOrder(order)} style={{width:'100%',textAlign:'left',background:'white',border:'1px solid #E5E7EB',borderRadius:'10px',padding:'12px',marginBottom:'8px',display:'flex',flexDirection:'column'}}>
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',marginBottom:'8px'}}>
+                                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                            <div style={{fontSize:'14px',fontWeight:700,color:'#111111'}}>โต๊ะ {order.table}</div>
+                                            <div style={{fontSize:'12px',color:'#6B7280'}}>{formatTime(order.createdAt)}</div>
                                         </div>
                                         <StatusBadge status={order.status} />
                                     </div>
-                                    <p className="text-[13px] truncate mb-2" style={{ color: "var(--text-secondary)" }}>
+                                    <div style={{fontSize:'13px',color:'#6B7280',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',width:'100%',marginBottom:'6px'}}>
                                         {(order.items ?? []).map((i) => `${i.name} ×${i.qty}`).join(", ")}
-                                    </p>
-                                    <p className="text-[15px] font-bold" style={{ color: "var(--primary)" }}>฿{order.total.toLocaleString()}</p>
+                                    </div>
+                                    <div style={{fontSize:'15px',fontWeight:700,color:'#111111'}}>฿{order.total.toLocaleString()}</div>
                                 </button>
                             ))
                         )}
                     </div>
                 )}
 
-                {/* ── TAB: เมนู (Menu) ──────────────────────────────────────── */}
-                {activeTab === "menu" && (
+                {activeTab === 'menu' && (
                     <div>
-                        <button
-                            onClick={() => setShowAddMenu(true)}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold mb-6 text-white text-[14px] shadow-sm active:scale-[0.98] transition-all"
-                            style={{ background: "var(--primary-gradient)" }}
-                        >
-                            + เพิ่มเมนูใหม่
-                        </button>
-
                         {Object.entries(menuGrouped).map(([cat, items]) => (
-                            <div key={cat} className="mb-6">
-                                <h3 className="text-[12px] font-bold tracking-widest uppercase mb-3 px-1" style={{ color: "var(--text-muted)" }}>
-                                    {CATEGORIES[cat] ?? cat}
-                                </h3>
-                                <div className="space-y-3">
-                                    {items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm transition-all"
-                                            style={{ border: "1px solid var(--border)", opacity: item.available ? 1 : 0.6 }}
-                                        >
-                                            {item.imageUrl ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-xl object-cover" />
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: "var(--bg-secondary)" }}>
-                                                    {item.emoji}
-                                                </div>
-                                            )}
-
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[14px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                                                    {item.name}
-                                                </p>
-                                                <p className="text-[13px] font-bold" style={{ color: "var(--primary)" }}>฿{item.price}</p>
-                                            </div>
-
-                                            <button
+                            <div key={cat} style={{marginBottom:'24px'}}>
+                                <div style={{fontSize:'12px',fontWeight:600,color:'#7C3AED',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:'12px'}}>{CATEGORIES[cat] ?? cat}</div>
+                                {items.map(item => (
+                                    <div key={item.id} style={{display:'flex',padding:'14px 16px',background:'white',border:'1px solid #E5E7EB',borderRadius:'12px',marginBottom:'8px',alignItems:'center'}}>
+                                        <div style={{width:'48px',height:'48px',borderRadius:'8px',overflow:'hidden',background:'#F3F4F6',display:'flex',alignItems:'center',justifyContent:'center',marginRight:'12px'}}>
+                                            {item.imageUrl ? <img src={item.imageUrl} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <div style={{fontSize:'24px'}}>{item.emoji}</div>}
+                                        </div>
+                                        <div style={{flex:1}}>
+                                            <div style={{fontSize:'15px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                                            <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{item.price}</div>
+                                        </div>
+                                        <div>
+                                            <button 
                                                 onClick={() => updateMenuAvailability(item.id, !item.available)}
-                                                className="relative w-12 h-7 rounded-full transition-colors flex-shrink-0"
-                                                style={{ background: item.available ? "var(--success)" : "rgba(107, 107, 138, 0.2)" }}
+                                                style={{width:'44px',height:'24px',borderRadius:'12px',background: item.available ? '#7C3AED' : '#D1D5DB',border:'none',position:'relative',transition:'background 0.2s',cursor:'pointer'}}
                                             >
-                                                <span
-                                                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${item.available ? "left-[22px]" : "left-1"}`}
-                                                />
+                                                <div style={{width:'20px',height:'20px',borderRadius:'10px',background:'white',position:'absolute',top:'2px',left: item.available ? '22px' : '2px',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.1)'}} />
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </div>
                         ))}
 
-                        {menuItems.length === 0 && (
-                            <p className="text-center py-16 text-sm" style={{ color: "var(--text-muted)" }}>ยังไม่มีเมนูในระบบ</p>
-                        )}
+                        <button onClick={() => setShowAddMenu(true)} style={{position:'fixed',bottom:'24px',right:'24px',width:'56px',height:'56px',borderRadius:'28px',background:'#7C3AED',color:'white',border:'none',fontSize:'28px',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 12px rgba(124,58,237,0.3)',zIndex:30}}>
+                            +
+                        </button>
                     </div>
                 )}
-            </main>
+            </div>
 
-            {/* ── Modals ────────────────────────────────────────────────────── */}
-            {selectedTable !== null && (
-                <TableModal
-                    tableNum={selectedTable}
-                    orders={tableOrders(selectedTable)}
-                    onClose={() => setSelectedTable(null)}
-                    onPaid={() => handlePaid(selectedTable)}
-                    onDone={() => handleDone(selectedTable)}
-                />
-            )}
-
-            {historyOrder && (
-                <HistoryModal
-                    order={historyOrder}
-                    onClose={() => setHistoryOrder(null)}
-                />
-            )}
-
-            {showAddMenu && (
-                <AddMenuModal onClose={() => setShowAddMenu(false)} />
-            )}
+            {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onPaid={() => handlePaid(selectedTable)} onDone={() => handleDone(selectedTable)} />}
+            {historyOrder && <HistoryModal order={historyOrder} onClose={() => setHistoryOrder(null)} />}
+            {showAddMenu && <AddMenuModal onClose={() => setShowAddMenu(false)} />}
         </div>
     );
 }
