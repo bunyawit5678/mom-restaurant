@@ -9,6 +9,8 @@ import {
     listenToMenu,
     updateMenuAvailability,
     addMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
     uploadMenuImage,
     listenToOptionGroups,
     addOptionGroup,
@@ -24,9 +26,11 @@ const NUM_TABLES = 8;
 
 function StatusBadge({ status }) {
     const map = {
-        pending: { label: "รอชำระ",  bg: "#FEF3C7", text: "#D97706" },
-        paid:    { label: "จ่ายแล้ว", bg: "#D1FAE5", text: "#059669" },
-        done:    { label: "ปิดแล้ว",  bg: "#F3F4F6", text: "#6B7280" },
+        pending:   { label: "รอทำ",      bg: "#FEF3C7", text: "#D97706" },
+        preparing: { label: "กำลังทำ",   bg: "#FFF7ED", text: "#EA580C" },
+        ready:     { label: "พร้อมแล้ว", bg: "#D1FAE5", text: "#059669" },
+        paid:      { label: "จ่ายแล้ว",  bg: "#D1FAE5", text: "#059669" },
+        done:      { label: "ปิดแล้ว",   bg: "#F3F4F6", text: "#6B7280" },
     };
     const { label, bg, text } = map[status] || { label: "ว่าง", bg: "#F3F4F6", text: "#6B7280" };
     return (
@@ -81,7 +85,6 @@ function PromptPayQR({ amount, phone }) {
 }
 
 function TableModal({ tableNum, orders, onClose, onClear }) {
-    const items      = useMemo(() => mergeItems(orders), [orders]);
     const grandTotal = orders.reduce((s, o) => s + (o.total ?? 0), 0);
     const notes      = orders.map((o) => o.note).filter(Boolean);
 
@@ -90,6 +93,10 @@ function TableModal({ tableNum, orders, onClose, onClear }) {
     useEffect(() => {
         setCustomTotal(grandTotal);
     }, [grandTotal]);
+
+    async function handleStatusChange(orderId, status) {
+        try { await updateOrderStatus(orderId, status); } catch(e) { console.error(e); }
+    }
 
     return (
         <>
@@ -105,13 +112,43 @@ function TableModal({ tableNum, orders, onClose, onClear }) {
                 </div>
                 
                 <div style={{overflowY:'auto',flex:1,padding:'0 16px 24px'}}>
-                    {items.map((item, i) => (
-                        <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F3F4F6'}}>
-                            <div style={{flex:1}}>
-                                <div style={{fontSize:'14px',fontWeight:500,color:'#111111'}}>{item.name}</div>
-                                <div style={{fontSize:'13px',color:'#6B7280'}}>{item.qty} × ฿{item.price}</div>
+                    {/* Per-order breakdown with status buttons */}
+                    {orders.map((order) => (
+                        <div key={order.id} style={{marginBottom:'16px',border:'1px solid #F3F4F6',borderRadius:'12px',overflow:'hidden'}}>
+                            <div style={{background:'#FAFAFA',padding:'8px 12px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                                <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                                    <StatusBadge status={order.status} />
+                                    {order.customerName && (
+                                        <span style={{fontSize:'12px',color:'#6B7280'}}>สั่งโดย: {order.customerName}</span>
+                                    )}
+                                </div>
+                                <div style={{display:'flex',gap:'6px'}}>
+                                    {order.status === 'pending' && (
+                                        <button onClick={() => handleStatusChange(order.id,'preparing')} style={{fontSize:'11px',padding:'4px 10px',background:'#FFF7ED',color:'#EA580C',border:'1px solid #FDBA74',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>กำลังทำ</button>
+                                    )}
+                                    {order.status === 'preparing' && (
+                                        <button onClick={() => handleStatusChange(order.id,'ready')} style={{fontSize:'11px',padding:'4px 10px',background:'#D1FAE5',color:'#059669',border:'1px solid #6EE7B7',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>พร้อมแล้ว</button>
+                                    )}
+                                </div>
                             </div>
-                            <div style={{fontSize:'14px',fontWeight:600,color:'#111111'}}>฿{item.qty * item.price}</div>
+                            {(order.items ?? []).map((item, i) => (
+                                <div key={i} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',padding:'8px 12px',borderTop:'1px solid #F3F4F6'}}>
+                                    <div style={{flex:1}}>
+                                        <div style={{fontSize:'14px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                                        <div style={{fontSize:'13px',color:'#6B7280'}}>{item.qty} × ฿{item.price}</div>
+                                        {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                            <div style={{fontSize:'12px',color:'#9CA3AF',marginTop:'2px'}}>
+                                                {item.selectedOptions.map((o, j) => (
+                                                    <span key={j}>{j > 0 ? ' · ' : '• '}
+                                                        {o.choiceLabel || o.name}{(o.priceAdd || o.price || 0) > 0 ? ` +฿${o.priceAdd || o.price}` : ''}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{fontSize:'14px',fontWeight:600,color:'#111111'}}>฿{item.qty * item.price}</div>
+                                </div>
+                            ))}
                         </div>
                     ))}
                     
@@ -178,15 +215,27 @@ function HistoryModal({ order, onClose }) {
                     <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
                 </div>
                 <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>โต๊ะ {order.table} <span style={{fontSize:'13px',fontWeight:400,color:'#6B7280',marginLeft:'8px'}}>{formatTime(order.createdAt)}</span></h2>
+                    <div>
+                        <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>โต๊ะ {order.table} <span style={{fontSize:'13px',fontWeight:400,color:'#6B7280',marginLeft:'8px'}}>{formatTime(order.createdAt)}</span></h2>
+                        {order.customerName && <p style={{fontSize:'12px',color:'#6B7280',margin:'2px 0 0'}}>สั่งโดย: {order.customerName}</p>}
+                    </div>
                     <button onClick={onClose} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
                 </div>
                 <div style={{overflowY:'auto',flex:1,padding:'0 16px 24px'}}>
                     {(order.items ?? []).map((item, i) => (
-                        <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F3F4F6'}}>
+                        <div key={i} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #F3F4F6'}}>
                             <div style={{flex:1}}>
                                 <div style={{fontSize:'14px',fontWeight:500,color:'#111111'}}>{item.name}</div>
                                 <div style={{fontSize:'13px',color:'#6B7280'}}>{item.qty} × ฿{item.price}</div>
+                                {item.selectedOptions && item.selectedOptions.length > 0 && (
+                                    <div style={{fontSize:'12px',color:'#9CA3AF',marginTop:'2px'}}>
+                                        {item.selectedOptions.map((o, j) => (
+                                            <span key={j}>{j > 0 ? ' · ' : '• '}
+                                                {o.choiceLabel || o.name}{(o.priceAdd || o.price || 0) > 0 ? ` +฿${o.priceAdd || o.price}` : ''}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div style={{fontSize:'14px',fontWeight:600,color:'#111111'}}>฿{item.qty * item.price}</div>
                         </div>
@@ -279,16 +328,21 @@ function OptionGroupModal({ group, onClose }) {
     );
 }
 
-function AddMenuModal({ onClose, optionGroups }) {
-    const [name,       setName]       = useState("");
-    const [price,      setPrice]      = useState("");
-    const [category,   setCategory]   = useState("rice");
-    const [emoji,      setEmoji]      = useState("🍛");
+function MenuItemFormModal({ onClose, optionGroups, editItem }) {
+    const isEdit = !!editItem;
+    const [name,       setName]       = useState(editItem?.name ?? "");
+    const [price,      setPrice]      = useState(editItem?.price ?? "");
+    const [category,   setCategory]   = useState(editItem?.category ?? "rice");
+    const [emoji,      setEmoji]      = useState(editItem?.emoji ?? "🍛");
+    const [description, setDescription] = useState(editItem?.description ?? "");
+    const [available,  setAvailable]  = useState(editItem?.available ?? true);
+    const [isRecommended, setIsRecommended] = useState(editItem?.isRecommended ?? false);
     const [imageFile,  setImageFile]  = useState(null);
-    const [preview,    setPreview]    = useState(null);
+    const [preview,    setPreview]    = useState(editItem?.imageUrl ?? null);
     const [saving,     setSaving]     = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [error,      setError]      = useState("");
-    const [selectedGroupIds, setSelectedGroupIds] = useState([]);
+    const [selectedGroupIds, setSelectedGroupIds] = useState(editItem?.optionGroupIds ?? []);
     const fileInputRef = useRef(null);
 
     function toggleOptionGroup(id) {
@@ -311,30 +365,60 @@ function AddMenuModal({ onClose, optionGroups }) {
         setError("");
 
         try {
-            const tempId = `temp_${Date.now()}`;
-            let imageUrl = "";
+            const tempId = editItem?.id ?? `temp_${Date.now()}`;
+            let imageUrl = editItem?.imageUrl ?? "";
 
             if (imageFile) {
-                imageUrl = await uploadMenuImage(imageFile, tempId);
+                setUploadingImage(true);
+                try {
+                    imageUrl = await uploadMenuImage(imageFile, tempId);
+                } catch (imgErr) {
+                    console.error(imgErr);
+                    setUploadingImage(false);
+                    setError("อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่");
+                    setSaving(false);
+                    return;
+                }
+                setUploadingImage(false);
             }
 
-            await addMenuItem({
-                name:      name.trim(),
-                price:     Number(price),
+            const data = {
+                name: name.trim(),
+                price: Number(price),
                 category,
                 emoji,
                 imageUrl,
-                available: true,
-                sortOrder: Date.now(),
-                description: "",
+                available,
+                isRecommended,
+                description: description.trim(),
                 optionGroupIds: selectedGroupIds,
-            });
+            };
+
+            if (isEdit) {
+                await updateMenuItem(editItem.id, data);
+            } else {
+                await addMenuItem({ ...data, sortOrder: Date.now() });
+            }
 
             onClose();
         } catch (err) {
             console.error(err);
             setError("เกิดข้อผิดพลาด กรุณาลองใหม่");
         } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleDelete() {
+        if (!editItem) return;
+        if (!window.confirm(`ต้องการลบ "${editItem.name}" หรือไม่?`)) return;
+        setSaving(true);
+        try {
+            await deleteMenuItem(editItem.id);
+            onClose();
+        } catch(err) {
+            console.error(err);
+            setError("ลบไม่สำเร็จ");
             setSaving(false);
         }
     }
@@ -347,24 +431,24 @@ function AddMenuModal({ onClose, optionGroups }) {
                     <div style={{width:'32px',height:'4px',background:'#E5E7EB',borderRadius:'2px',marginBottom:'4px'}} />
                 </div>
                 <div style={{padding:'0 16px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>เพิ่มเมนูใหม่</h2>
+                    <h2 style={{fontSize:'17px',fontWeight:700,margin:0}}>{isEdit ? 'แก้ไขเมนู' : 'เพิ่มเมนูใหม่'}</h2>
                     <button onClick={onClose} disabled={saving} style={{background:'none',border:'none',fontSize:'20px',color:'#6B7280'}}>✕</button>
                 </div>
                 
                 <form onSubmit={handleSubmit} style={{overflowY:'auto',flex:1,padding:'0 16px 24px',display:'flex',flexDirection:'column',gap:'16px'}}>
                     <div>
-                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>รูปภาพ (ถ้ามี)</label>
-                        <button type="button" onClick={() => fileInputRef.current?.click()} style={{width:'100%',height:'120px',borderRadius:'12px',border:'2px dashed #E5E7EB',background:'#FAFAFA',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden',color:'#6B7280'}}>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>รูปภาพ</label>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} style={{width:'100%',height:'140px',borderRadius:'12px',border:'2px dashed #E5E7EB',background:'#FAFAFA',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden',color:'#6B7280'}}>
                             {preview ? (
                                 <img src={preview} alt="preview" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover'}} />
                             ) : (
                                 <>
-                                    <div style={{fontSize:'24px'}}>📷</div>
-                                    <div style={{fontSize:'13px'}}>แตะเพื่อเลือกรูป</div>
+                                    <div style={{fontSize:'28px'}}>📷</div>
+                                    <div style={{fontSize:'13px',marginTop:'6px'}}>แตะเพื่อเพิ่มรูป</div>
                                 </>
                             )}
                         </button>
-                        <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleFileChange} />
+                        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={handleFileChange} />
                     </div>
 
                     <div>
@@ -397,6 +481,31 @@ function AddMenuModal({ onClose, optionGroups }) {
                         </select>
                     </div>
 
+                    <div>
+                        <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>คำอธิบาย</label>
+                        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="คำอธิบายเมนู (ถ้ามี)" rows={2} style={{width:'100%',borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none',resize:'none'}} />
+                    </div>
+
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <label style={{fontSize:'13px',fontWeight:600,color:'#374151'}}>สถานะ (เปิดขาย)</label>
+                        <button type="button" onClick={() => setAvailable(v => !v)} style={{width:'44px',height:'24px',borderRadius:'12px',background: available ? '#7C3AED' : '#D1D5DB',border:'none',position:'relative',cursor:'pointer'}}>
+                            <div style={{width:'20px',height:'20px',borderRadius:'10px',background:'white',position:'absolute',top:'2px',left: available ? '22px' : '2px',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.1)'}} />
+                        </button>
+                    </div>
+
+                    <label style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px',border:'1px solid',borderColor: isRecommended ? '#F97316' : '#E5E7EB',borderRadius:'12px',background: isRecommended ? '#FFF7ED' : 'white',cursor:'pointer'}}>
+                        <input
+                            type="checkbox"
+                            checked={isRecommended}
+                            onChange={e => setIsRecommended(e.target.checked)}
+                            style={{width:'18px',height:'18px',accentColor:'#F97316',flexShrink:0}}
+                        />
+                        <div>
+                            <div style={{fontSize:'14px',fontWeight:600,color: isRecommended ? '#EA580C' : '#111111'}}>⭐ เมนูแนะนำ (Bestseller)</div>
+                            <div style={{fontSize:'12px',color:'#6B7280',marginTop:'2px'}}>แสดงป้าย“⭐ แนะนำ” บนการ์ดเมนูสำหรับลูกค้า</div>
+                        </div>
+                    </label>
+
                     {optionGroups && optionGroups.length > 0 && (
                         <div>
                             <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>กลุ่มตัวเลือก (ตัวเลือกเสริม)</label>
@@ -414,15 +523,23 @@ function AddMenuModal({ onClose, optionGroups }) {
 
                     {error && <div style={{fontSize:'13px',fontWeight:600,color:'#EF4444',padding:'12px',background:'#FEF2F2',borderRadius:'8px'}}>{error}</div>}
 
-                    <div style={{paddingTop:'8px'}}>
-                        <button type="submit" disabled={saving} style={{width:'100%',padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px',opacity: saving ? 0.7 : 1}}>
-                            {saving ? 'กำลังบันทึก...' : 'บันทึกเมนู'}
+                    <div style={{paddingTop:'8px',display:'flex',gap:'10px'}}>
+                        <button type="submit" disabled={saving || uploadingImage} style={{flex:1,padding:'14px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'15px',opacity: (saving || uploadingImage) ? 0.7 : 1}}>
+                            {uploadingImage ? 'กำลังอัปโหลดรูป...' : (saving ? 'กำลังบันทึก...' : 'บันทึกเมนู')}
                         </button>
+                        {isEdit && (
+                            <button type="button" onClick={handleDelete} disabled={saving} style={{padding:'14px',background:'#FEF2F2',color:'#EF4444',borderRadius:'12px',border:'1px solid #FCA5A5',fontWeight:600,fontSize:'15px',whiteSpace:'nowrap'}}>ลบเมนู</button>
+                        )}
                     </div>
                 </form>
             </div>
         </>
     );
+}
+
+// Keep old name as alias for backward compat
+function AddMenuModal({ onClose, optionGroups }) {
+    return <MenuItemFormModal onClose={onClose} optionGroups={optionGroups} editItem={null} />;
 }
 
 export default function AdminPage() {
@@ -434,6 +551,7 @@ export default function AdminPage() {
     const [selectedTable, setSelectedTable] = useState(null);
     const [historyOrder,  setHistoryOrder]  = useState(null);
     const [showAddMenu,   setShowAddMenu]   = useState(false);
+    const [editMenuItem,  setEditMenuItem]  = useState(null);
     const [optionGroups,  setOptionGroups]  = useState([]);
     const [showEditGroup, setShowEditGroup] = useState(null);
 
@@ -621,14 +739,23 @@ export default function AdminPage() {
                                 <div style={{fontSize:'12px',fontWeight:600,color:'#7C3AED',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:'12px'}}>{CATEGORIES[cat] ?? cat}</div>
                                 {items.map(item => (
                                     <div key={item.id} style={{display:'flex',padding:'14px 16px',background:'white',border:'1px solid #E5E7EB',borderRadius:'12px',marginBottom:'8px',alignItems:'center'}}>
-                                        <div style={{width:'48px',height:'48px',borderRadius:'8px',overflow:'hidden',background:'#F3F4F6',display:'flex',alignItems:'center',justifyContent:'center',marginRight:'12px'}}>
+                                        <div style={{width:'48px',height:'48px',borderRadius:'8px',overflow:'hidden',background:'#F3F4F6',display:'flex',alignItems:'center',justifyContent:'center',marginRight:'12px',flexShrink:0}}>
                                             {item.imageUrl ? <img src={item.imageUrl} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <div style={{fontSize:'24px'}}>{item.emoji}</div>}
                                         </div>
-                                        <div style={{flex:1}}>
-                                            <div style={{fontSize:'15px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                                        <div style={{flex:1,minWidth:0}}>
+                                            <div style={{fontSize:'15px',fontWeight:500,color:'#111111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:'6px'}}>
+                                                {item.name}
+                                                {item.isRecommended && (
+                                                    <span style={{fontSize:'10px',fontWeight:700,color:'white',background:'linear-gradient(135deg,#F97316,#EF4444)',padding:'1px 6px',borderRadius:'10px',flexShrink:0}}>⭐ แนะนำ</span>
+                                                )}
+                                            </div>
                                             <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{item.price}</div>
                                         </div>
-                                        <div>
+                                        <div style={{display:'flex',alignItems:'center',gap:'8px',flexShrink:0}}>
+                                            <button
+                                                onClick={() => setEditMenuItem(item)}
+                                                style={{padding:'6px 12px',fontSize:'12px',fontWeight:600,background:'#F3F4F6',color:'#374151',border:'1px solid #E5E7EB',borderRadius:'8px',cursor:'pointer'}}
+                                            >✏️ แก้ไข</button>
                                             <button 
                                                 onClick={() => updateMenuAvailability(item.id, !item.available)}
                                                 style={{width:'44px',height:'24px',borderRadius:'12px',background: item.available ? '#7C3AED' : '#D1D5DB',border:'none',position:'relative',transition:'background 0.2s',cursor:'pointer'}}
@@ -670,6 +797,7 @@ export default function AdminPage() {
             {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onClear={(total) => handleClearTable(selectedTable, total)} />}
             {historyOrder && <HistoryModal order={historyOrder} onClose={() => setHistoryOrder(null)} />}
             {showAddMenu && <AddMenuModal optionGroups={optionGroups} onClose={() => setShowAddMenu(false)} />}
+            {editMenuItem && <MenuItemFormModal optionGroups={optionGroups} editItem={editMenuItem} onClose={() => setEditMenuItem(null)} />}
             {showEditGroup && <OptionGroupModal group={showEditGroup === "new" ? null : showEditGroup} onClose={() => setShowEditGroup(null)} />}
         </div>
     );
