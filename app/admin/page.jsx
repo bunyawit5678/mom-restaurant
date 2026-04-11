@@ -710,6 +710,9 @@ export default function AdminPage() {
     const [editMenuItem,  setEditMenuItem]  = useState(null);
     const [optionGroups,  setOptionGroups]  = useState([]);
     const [showEditGroup, setShowEditGroup] = useState(null);
+    const [menuSearchQuery, setMenuSearchQuery] = useState("");
+    const [refreshKey,    setRefreshKey]    = useState(0);
+    const [refreshing,    setRefreshing]    = useState(false);
 
     useEffect(() => {
         const unsub = listenToOptionGroups((groups) => setOptionGroups(groups));
@@ -780,22 +783,40 @@ export default function AdminPage() {
     }
 
     const menuGrouped = useMemo(() => {
+        const q = menuSearchQuery.trim().toLowerCase();
+        const filtered = q
+            ? menuItems.filter(item => item.name?.toLowerCase().includes(q))
+            : menuItems;
         const groups = {};
-        for (const item of menuItems) {
+        for (const item of filtered) {
             if (!groups[item.category]) groups[item.category] = [];
             groups[item.category].push(item);
         }
         return groups;
-    }, [menuItems]);
+    }, [menuItems, menuSearchQuery]);
 
     return (
         <div style={{minHeight:'100vh',background:'#FAFAFA',paddingBottom:'80px'}}>
             {/* TOP BAR */}
             <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>แดชบอร์ด ครัวตุ๊กตาอาหารตามสั่ง</div>
-                <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:600,color:'#10B981'}}>
-                    <div style={{width:'8px',height:'8px',borderRadius:'4px',background:'#10B981',animation:'pulse 2s infinite'}} />
-                    Live
+                <div style={{fontWeight:700,fontSize:'17px',color:'#111111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginRight:'8px'}}>แดชบอร์ด ครัวตุ๊กตาอาหารตามสั่ง</div>
+                <div style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}>
+                    <button
+                        onClick={() => {
+                            setRefreshing(true);
+                            setRefreshKey(k => k + 1);
+                            setTimeout(() => setRefreshing(false), 800);
+                        }}
+                        title="รีเฟรชข้อมูล"
+                        style={{background:'none',border:'1px solid #E5E7EB',borderRadius:'8px',padding:'4px 10px',fontSize:'13px',color:'#6B7280',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px',transition:'all 0.2s'}}
+                    >
+                        <span style={{display:'inline-block',transition:'transform 0.5s',transform: refreshing ? 'rotate(360deg)' : 'none'}}>🔄</span>
+                        <span style={{fontSize:'12px',fontWeight:500}}>รีเฟรช</span>
+                    </button>
+                    <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',fontWeight:600,color:'#10B981'}}>
+                        <div style={{width:'8px',height:'8px',borderRadius:'4px',background:'#10B981',animation:'pulse 2s infinite'}} />
+                        Live
+                    </div>
                 </div>
             </div>
 
@@ -891,6 +912,50 @@ export default function AdminPage() {
 
                 {activeTab === 'menu' && (
                     <div>
+                        {/* Menu Search Input */}
+                        <div style={{position:'relative',marginBottom:'16px'}}>
+                            <span style={{position:'absolute',left:'12px',top:'50%',transform:'translateY(-50%)',fontSize:'16px',pointerEvents:'none',lineHeight:1}}>🔍</span>
+                            <input
+                                type="text"
+                                value={menuSearchQuery}
+                                onChange={e => setMenuSearchQuery(e.target.value)}
+                                placeholder="ค้นหาชื่อเมนู..."
+                                style={{
+                                    width:'100%',
+                                    boxSizing:'border-box',
+                                    padding:'10px 12px 10px 38px',
+                                    border:'1px solid #E5E7EB',
+                                    borderRadius:'12px',
+                                    fontSize:'15px',
+                                    outline:'none',
+                                    background:'white',
+                                    boxShadow:'0 1px 3px rgba(0,0,0,0.05)',
+                                    color:'#111111',
+                                }}
+                            />
+                            {menuSearchQuery && (
+                                <button
+                                    onClick={() => setMenuSearchQuery('')}
+                                    style={{position:'absolute',right:'10px',top:'50%',transform:'translateY(-50%)',background:'none',border:'none',fontSize:'16px',color:'#9CA3AF',cursor:'pointer',lineHeight:1}}
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Menu results count when searching */}
+                        {menuSearchQuery.trim() && (
+                            <div style={{fontSize:'12px',color:'#6B7280',marginBottom:'12px',paddingLeft:'2px'}}>
+                                พบ {Object.values(menuGrouped).flat().length} รายการ
+                            </div>
+                        )}
+
+                        {Object.entries(menuGrouped).length === 0 && menuSearchQuery.trim() && (
+                            <div style={{textAlign:'center',padding:'40px 16px',color:'#9CA3AF'}}>
+                                <div style={{fontSize:'32px',marginBottom:'8px'}}>🔍</div>
+                                <div style={{fontSize:'14px'}}>ไม่พบเมนู &quot;{menuSearchQuery}&quot;</div>
+                            </div>
+                        )}
                         {Object.entries(menuGrouped).map(([cat, items]) => (
                             <div key={cat} style={{marginBottom:'24px'}}>
                                 <div style={{fontSize:'12px',fontWeight:600,color:'#7C3AED',textTransform:'uppercase',letterSpacing:'0.5px',marginBottom:'12px'}}>{CATEGORIES[cat] ?? cat}</div>
