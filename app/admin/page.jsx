@@ -345,6 +345,44 @@ function MenuItemFormModal({ onClose, optionGroups, editItem }) {
     const [selectedGroupIds, setSelectedGroupIds] = useState(editItem?.optionGroupIds ?? []);
     const fileInputRef = useRef(null);
 
+    // ── Inline options (item-level modifiers) ────────────────────────────────
+    const [inlineOptions, setInlineOptions] = useState(() => {
+        if (editItem?.options && editItem.options.length > 0) return editItem.options;
+        return [];
+    });
+
+    function addOptionGroup() {
+        const gid = `og_${Date.now()}`;
+        setInlineOptions(prev => [...prev, {
+            id: gid,
+            label: '',
+            required: false,
+            type: 'radio',
+            choices: [{ id: `c_${Date.now()}`, label: '', priceAdd: 0 }]
+        }]);
+    }
+    function removeOptionGroup(gid) {
+        setInlineOptions(prev => prev.filter(g => g.id !== gid));
+    }
+    function updateOptionGroup(gid, field, value) {
+        setInlineOptions(prev => prev.map(g => g.id === gid ? { ...g, [field]: value } : g));
+    }
+    function addChoice(gid) {
+        setInlineOptions(prev => prev.map(g => g.id === gid
+            ? { ...g, choices: [...g.choices, { id: `c_${Date.now()}`, label: '', priceAdd: 0 }] }
+            : g));
+    }
+    function removeChoice(gid, cid) {
+        setInlineOptions(prev => prev.map(g => g.id === gid
+            ? { ...g, choices: g.choices.filter(c => c.id !== cid) }
+            : g));
+    }
+    function updateChoice(gid, cid, field, value) {
+        setInlineOptions(prev => prev.map(g => g.id === gid
+            ? { ...g, choices: g.choices.map(c => c.id === cid ? { ...c, [field]: value } : c) }
+            : g));
+    }
+
     function toggleOptionGroup(id) {
         setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     }
@@ -392,6 +430,15 @@ function MenuItemFormModal({ onClose, optionGroups, editItem }) {
                 isRecommended,
                 description: description.trim(),
                 optionGroupIds: selectedGroupIds,
+                options: inlineOptions.map(g => ({
+                    id: g.id,
+                    label: g.label.trim(),
+                    required: g.required,
+                    type: g.type,
+                    choices: g.choices
+                        .filter(c => c.label.trim())
+                        .map(c => ({ id: c.id, label: c.label.trim(), priceAdd: Number(c.priceAdd) || 0 }))
+                })).filter(g => g.label && g.choices.length > 0),
             };
 
             if (isEdit) {
@@ -506,14 +553,100 @@ function MenuItemFormModal({ onClose, optionGroups, editItem }) {
                         </div>
                     </label>
 
+                    {/* ── Inline Options Builder ──────────────────────────────── */}
+                    <div>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'10px'}}>
+                            <label style={{fontSize:'13px',fontWeight:700,color:'#374151'}}>ตัวเลือกเพิ่มเติม</label>
+                            <button type="button" onClick={addOptionGroup}
+                                style={{fontSize:'12px',fontWeight:600,color:'#7C3AED',background:'#EDE9FE',border:'none',borderRadius:'8px',padding:'5px 12px',cursor:'pointer'}}>
+                                + เพิ่มกลุ่ม
+                            </button>
+                        </div>
+
+                        {inlineOptions.length === 0 && (
+                            <div style={{textAlign:'center',padding:'18px',background:'#F9FAFB',borderRadius:'10px',border:'1px dashed #D1D5DB',fontSize:'13px',color:'#9CA3AF'}}>
+                                ยังไม่มีตัวเลือก — กด &quot;+ เพิ่มกลุ่ม&quot; เพื่อเริ่ม
+                            </div>
+                        )}
+
+                        {inlineOptions.map((group) => (
+                            <div key={group.id} style={{background:'#F9FAFB',border:'1px solid #E5E7EB',borderRadius:'10px',padding:'14px',marginBottom:'10px'}}>
+                                {/* Group header row */}
+                                <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'10px',flexWrap:'wrap'}}>
+                                    <input
+                                        type="text"
+                                        value={group.label}
+                                        onChange={e => updateOptionGroup(group.id, 'label', e.target.value)}
+                                        placeholder="ชื่อกลุ่ม เช่น ประเภทเนื้อ"
+                                        style={{flex:1,minWidth:'120px',borderRadius:'8px',padding:'8px 10px',border:'1px solid #D1D5DB',fontSize:'14px',outline:'none',background:'white'}}
+                                    />
+                                    <select
+                                        value={group.type}
+                                        onChange={e => updateOptionGroup(group.id, 'type', e.target.value)}
+                                        style={{borderRadius:'8px',padding:'8px 6px',border:'1px solid #D1D5DB',fontSize:'12px',outline:'none',background:'white',color:'#374151'}}
+                                    >
+                                        <option value="radio">เลือก 1 อย่าง</option>
+                                        <option value="checkbox">เลือกได้หลายอย่าง</option>
+                                    </select>
+                                    <label style={{display:'flex',alignItems:'center',gap:'5px',fontSize:'12px',color:'#374151',cursor:'pointer',whiteSpace:'nowrap'}}>
+                                        <input
+                                            type="checkbox"
+                                            checked={group.required}
+                                            onChange={e => updateOptionGroup(group.id, 'required', e.target.checked)}
+                                            style={{width:'15px',height:'15px',accentColor:'#EF4444'}}
+                                        />
+                                        <span style={{color: group.required ? '#EF4444' : '#6B7280',fontWeight: group.required ? 600 : 400}}>บังคับ</span>
+                                    </label>
+                                    <button type="button" onClick={() => removeOptionGroup(group.id)}
+                                        style={{width:'30px',height:'30px',borderRadius:'8px',border:'1px solid #FCA5A5',background:'#FEF2F2',color:'#EF4444',fontSize:'14px',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                        🗑
+                                    </button>
+                                </div>
+
+                                {/* Choices */}
+                                <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                                    {group.choices.map((choice) => (
+                                        <div key={choice.id} style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                                            <input
+                                                type="text"
+                                                value={choice.label}
+                                                onChange={e => updateChoice(group.id, choice.id, 'label', e.target.value)}
+                                                placeholder="ชื่อตัวเลือก เช่น หมู"
+                                                style={{flex:1,borderRadius:'8px',padding:'7px 10px',border:'1px solid #D1D5DB',fontSize:'13px',outline:'none',background:'white'}}
+                                            />
+                                            <span style={{fontSize:'12px',color:'#9CA3AF',flexShrink:0}}>+฿</span>
+                                            <input
+                                                type="number"
+                                                value={choice.priceAdd}
+                                                min="0"
+                                                onChange={e => updateChoice(group.id, choice.id, 'priceAdd', e.target.value)}
+                                                style={{width:'64px',borderRadius:'8px',padding:'7px 8px',border:'1px solid #D1D5DB',fontSize:'13px',outline:'none',background:'white',textAlign:'right'}}
+                                            />
+                                            <button type="button" onClick={() => removeChoice(group.id, choice.id)}
+                                                style={{width:'28px',height:'28px',borderRadius:'8px',border:'1px solid #E5E7EB',background:'white',color:'#9CA3AF',fontSize:'14px',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button type="button" onClick={() => addChoice(group.id)}
+                                    style={{marginTop:'8px',width:'100%',padding:'7px',background:'white',border:'1px dashed #D1D5DB',borderRadius:'8px',fontSize:'12px',color:'#6B7280',cursor:'pointer',fontWeight:500}}>
+                                    + เพิ่มตัวเลือก
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── Legacy option groups (backward compat) ──────────────── */}
                     {optionGroups && optionGroups.length > 0 && (
                         <div>
-                            <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>กลุ่มตัวเลือก (ตัวเลือกเสริม)</label>
+                            <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#6B7280',marginBottom:'8px'}}>กลุ่มตัวเลือกแบบเก่า (Legacy)</label>
                             <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
                                 {optionGroups.map((group) => (
                                     <label key={group.id} style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'14px',color:'#111111'}}>
                                         <input type="checkbox" checked={selectedGroupIds.includes(group.id)} onChange={() => toggleOptionGroup(group.id)} style={{width:'18px',height:'18px',accentColor:'#7C3AED'}} />
-                                        {group.name} 
+                                        {group.name}
                                         <span style={{fontSize:'12px',color:'#6B7280'}}>({group.options.map(o => o.name).join(', ')})</span>
                                     </label>
                                 ))}
