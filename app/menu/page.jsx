@@ -241,7 +241,7 @@ function MenuItemCard({ item, qty, onAdd, onRemove }) {
 // ItemOptionsModal — Feature 2 (supports inline options + optionGroupIds)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
+function ItemOptionsModal({ item, allGroups, onClose, onConfirm, editMode, initialSelections }) {
   // Build unified option groups array
   // Priority: item.options (new inline schema) then fallback to optionGroupIds
   const inlineOptions = item.options && item.options.length > 0 ? item.options : null;
@@ -255,7 +255,11 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
     if (!inlineOptions) return {};
     const init = {};
     inlineOptions.forEach((opt) => {
-      init[opt.id] = opt.type === "checkbox" ? new Set() : null;
+      if (editMode && initialSelections && initialSelections[opt.id] !== undefined) {
+        init[opt.id] = initialSelections[opt.id];
+      } else {
+        init[opt.id] = opt.type === "checkbox" ? new Set() : null;
+      }
     });
     return init;
   });
@@ -264,7 +268,8 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
     legacyGroups.forEach((g) => (init[g.id] = 0));
     return init;
   });
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState(editMode ? (initialSelections?.__qty ?? 1) : 1);
+  const [specialNote, setSpecialNote] = useState(editMode ? (initialSelections?.__note ?? "") : "");
 
   // Compute added price
   let addedPrice = 0;
@@ -292,9 +297,15 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
   const unitPrice = item.price + addedPrice;
   const totalPrice = unitPrice * qty;
 
-  // Required validation
+  // Required validation — skip required check if ALL available choices in group are unavailable
   const isValid = inlineOptions
-    ? inlineOptions.filter((o) => o.required && o.type === "radio").every((o) => inlineSelections[o.id] !== null)
+    ? inlineOptions
+        .filter((o) => {
+          if (!o.required || o.type !== "radio") return false;
+          const availableChoices = (o.choices || []).filter(c => c.available !== false);
+          return availableChoices.length > 0; // only validate if there are available choices
+        })
+        .every((o) => inlineSelections[o.id] !== null)
     : true;
 
   function handleSubmit() {
@@ -319,7 +330,12 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
     } else {
       selectedOptions = legacyGroups.map((g) => g.options[legacySelections[g.id]]);
     }
-    onConfirm(item, selectedOptions, addedPrice, qty);
+    onConfirm(item, selectedOptions, addedPrice, qty, specialNote.trim());
+  }
+
+  // Helper: build initialSelections snapshot for edit re-open
+  function buildSelectionsSnapshot() {
+    return { ...inlineSelections, __qty: qty, __note: specialNote };
   }
 
   return (
@@ -353,48 +369,63 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
         {/* Scrollable options */}
         <div style={{overflowY:'auto',flex:1,padding:'16px',display:'flex',flexDirection:'column',gap:'20px'}}>
           {/* Inline options (new schema) */}
-          {inlineOptions && inlineOptions.map((opt) => (
-            <div key={opt.id}>
-              <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}>
-                <span style={{fontSize:'14px',fontWeight:700,color:'#374151'}}>{opt.label}</span>
-                {opt.required && (
-                  <span style={{fontSize:'11px',color:'white',background:'#EF4444',padding:'2px 8px',borderRadius:'10px',fontWeight:600}}>ต้องการ</span>
+          {inlineOptions && inlineOptions.map((opt) => {
+            const availableChoices = (opt.choices || []).filter(c => c.available !== false);
+            const allUnavailable = availableChoices.length === 0;
+            return (
+              <div key={opt.id}>
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}>
+                  <span style={{fontSize:'14px',fontWeight:700,color:'#374151'}}>{opt.label}</span>
+                  {opt.required && !allUnavailable && (
+                    <span style={{fontSize:'11px',color:'white',background:'#EF4444',padding:'2px 8px',borderRadius:'10px',fontWeight:600}}>ต้องการ</span>
+                  )}
+                </div>
+                {allUnavailable ? (
+                  <div style={{padding:'12px',background:'#F9FAFB',borderRadius:'10px',fontSize:'13px',color:'#9CA3AF',textAlign:'center'}}>
+                    ตัวเลือกนี้ไม่พร้อมให้บริการในขณะนี้
+                  </div>
+                ) : (
+                  opt.choices.map((choice) => {
+                    const isUnavailable = choice.available === false;
+                    const isSelected = opt.type === "radio"
+                      ? inlineSelections[opt.id] === choice.id
+                      : inlineSelections[opt.id]?.has(choice.id);
+                    return (
+                      <label key={choice.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px',border:'1px solid',borderColor: isSelected ? '#7C3AED' : '#E5E7EB',borderRadius:'12px',marginBottom:'8px',background: isUnavailable ? '#F9FAFB' : (isSelected ? '#EDE9FE' : 'white'),cursor: isUnavailable ? 'not-allowed' : 'pointer',opacity: isUnavailable ? 0.6 : 1}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                          <input
+                            type={opt.type === "radio" ? "radio" : "checkbox"}
+                            name={opt.id}
+                            checked={!!isSelected}
+                            disabled={isUnavailable}
+                            onChange={() => {
+                              if (isUnavailable) return;
+                              if (opt.type === "radio") {
+                                setInlineSelections((p) => ({ ...p, [opt.id]: choice.id }));
+                              } else {
+                                setInlineSelections((p) => {
+                                  const prev = new Set(p[opt.id]);
+                                  prev.has(choice.id) ? prev.delete(choice.id) : prev.add(choice.id);
+                                  return { ...p, [opt.id]: prev };
+                                });
+                              }
+                            }}
+                            style={{width:'18px',height:'18px',accentColor:'#7C3AED'}}
+                          />
+                          <span style={{fontSize:'15px',fontWeight:500,color: isUnavailable ? '#9CA3AF' : (isSelected ? '#7C3AED' : '#111111'),textDecoration: isUnavailable ? 'line-through' : 'none'}}>{choice.label}</span>
+                        </div>
+                        {isUnavailable ? (
+                          <span style={{fontSize:'12px',color:'#9CA3AF'}}>หมด</span>
+                        ) : (choice.priceAdd || 0) > 0 && (
+                          <span style={{fontSize:'13px',color:'#6B7280'}}>+฿{choice.priceAdd}</span>
+                        )}
+                      </label>
+                    );
+                  })
                 )}
               </div>
-              {opt.choices.map((choice) => {
-                const isSelected = opt.type === "radio"
-                  ? inlineSelections[opt.id] === choice.id
-                  : inlineSelections[opt.id]?.has(choice.id);
-                return (
-                  <label key={choice.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px',border:'1px solid',borderColor: isSelected ? '#7C3AED' : '#E5E7EB',borderRadius:'12px',marginBottom:'8px',background: isSelected ? '#EDE9FE' : 'white',cursor:'pointer'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                      <input
-                        type={opt.type === "radio" ? "radio" : "checkbox"}
-                        name={opt.id}
-                        checked={!!isSelected}
-                        onChange={() => {
-                          if (opt.type === "radio") {
-                            setInlineSelections((p) => ({ ...p, [opt.id]: choice.id }));
-                          } else {
-                            setInlineSelections((p) => {
-                              const prev = new Set(p[opt.id]);
-                              prev.has(choice.id) ? prev.delete(choice.id) : prev.add(choice.id);
-                              return { ...p, [opt.id]: prev };
-                            });
-                          }
-                        }}
-                        style={{width:'18px',height:'18px',accentColor:'#7C3AED'}}
-                      />
-                      <span style={{fontSize:'15px',fontWeight:500,color: isSelected ? '#7C3AED' : '#111111'}}>{choice.label}</span>
-                    </div>
-                    {(choice.priceAdd || 0) > 0 && (
-                      <span style={{fontSize:'13px',color:'#6B7280'}}>+฿{choice.priceAdd}</span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          ))}
+            );
+          })}
 
           {/* Legacy option groups */}
           {legacyGroups.map((group) => (
@@ -414,6 +445,23 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
             </div>
           ))}
 
+          {/* Special instructions */}
+          <div style={{borderRadius:'14px',border:'1px solid #E5E7EB',background:'#FAFAFA',padding:'12px 14px',boxShadow:'inset 0 1px 3px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:'12px',fontWeight:700,color:'#6B7280',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'0.4px'}}>📝 หมายเหตุถึงร้าน</div>
+            <textarea
+              value={specialNote}
+              onChange={(e) => setSpecialNote(e.target.value)}
+              placeholder="เช่น ไม่ใส่ผงชูรส, เผ็ดน้อย, ไม่ใส่ผัก..."
+              rows={2}
+              style={{
+                width:'100%',border:'none',background:'transparent',
+                fontSize:'14px',color:'#111111',outline:'none',
+                resize:'none',lineHeight:'1.5',fontFamily:'inherit',
+                boxSizing:'border-box',
+              }}
+            />
+          </div>
+
           {/* Qty stepper */}
           <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'20px',padding:'8px 0'}}>
             <button onClick={() => setQty((q) => Math.max(1, q - 1))} style={{width:'36px',height:'36px',borderRadius:'18px',background:'#F3F4F6',border:'none',fontSize:'20px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
@@ -421,13 +469,13 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm }) {
             <button onClick={() => setQty((q) => q + 1)} style={{width:'36px',height:'36px',borderRadius:'18px',background:'#7C3AED',color:'white',border:'none',fontSize:'20px',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
           </div>
 
-          {/* Add to cart button */}
+          {/* Add to cart / update button */}
           <button
             onClick={handleSubmit}
             disabled={!isValid}
             style={{width:'100%',padding:'16px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:700,fontSize:'16px',opacity: isValid ? 1 : 0.5,boxShadow:'0 4px 12px rgba(124,58,237,0.3)'}}
           >
-            เพิ่มลงตะกร้า ฿{totalPrice}
+            {editMode ? `อัพเดตรายการ ฿${totalPrice}` : `เพิ่มลงตะกร้า ฿${totalPrice}`}
           </button>
         </div>
       </div>
@@ -455,7 +503,14 @@ function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, s
           {cartItems.map((item, i) => (
             <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{flex:1}}>
-                <div style={{fontSize:'15px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                  <div style={{fontSize:'15px',fontWeight:500,color:'#111111'}}>{item.name}</div>
+                  {item.selectedOptions && item.selectedOptions.length > 0 && item.onEdit && (
+                    <button onClick={() => item.onEdit()} style={{background:'none',border:'none',fontSize:'12px',color:'#7C3AED',textDecoration:'underline',cursor:'pointer',padding:0,flexShrink:0}}>
+                      แก้ไข
+                    </button>
+                  )}
+                </div>
                 {item.selectedOptions && item.selectedOptions.length > 0 && (
                   <div style={{fontSize:'12px',color:'#6B7280',marginTop:'2px'}}>
                     {item.selectedOptions.map((o, j) => (
@@ -463,6 +518,12 @@ function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, s
                         {o.choiceLabel || o.name}{(o.priceAdd || o.price || 0) > 0 ? ` +฿${o.priceAdd || o.price}` : ''}
                       </span>
                     ))}
+                  </div>
+                )}
+                {item.specialNote && (
+                  <div style={{fontSize:'12px',color:'#F97316',marginTop:'3px',display:'flex',alignItems:'flex-start',gap:'4px'}}>
+                    <span style={{flexShrink:0}}>📝</span>
+                    <span>{item.specialNote}</span>
                   </div>
                 )}
                 <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{item.price * item.qty}</div>
@@ -530,6 +591,7 @@ function MenuPageInner() {
   const [showSuccess, setShowSuccess]     = useState(false);
   const [showCart, setShowCart]           = useState(false);
   const [selectedItem, setSelectedItem]   = useState(null);
+  const [editCartItem, setEditCartItem]   = useState(null); // { cartKey, item, initialSelections }
 
   // ── Feature 3: Search ───────────────────────────────────────────────────
   const [searchOpen, setSearchOpen]       = useState(false);
@@ -581,12 +643,16 @@ function MenuPageInner() {
     }
   };
 
-  const addToCart = (baseItem, selectedOptions = [], addedPrice = 0, qty = 1) => {
-    // Build a stable cart key from name + options
+  const addToCart = (baseItem, selectedOptions = [], addedPrice = 0, qty = 1, specialNote = "") => {
+    // Build a stable cart key from name + options + note (so same item with diff notes = separate rows)
     const optionsKey = selectedOptions
       .map((o) => o.choiceLabel || o.name || "")
       .join("|");
-    const cartItemId = optionsKey ? `${baseItem.id}_${optionsKey}` : baseItem.id;
+    const noteKey = specialNote ? `__${specialNote}` : "";
+    const cartItemId = optionsKey
+      ? `${baseItem.id}_${optionsKey}${noteKey}`
+      : specialNote ? `${baseItem.id}${noteKey}` : baseItem.id;
+
     const nameWithOpts = selectedOptions.length > 0
       ? `${baseItem.name} (${selectedOptions.map((o) => o.choiceLabel || o.name).join(", ")})`
       : baseItem.name;
@@ -605,9 +671,33 @@ function MenuPageInner() {
             qty,
             category: baseItem.category,
             selectedOptions,
+            specialNote,
           },
     }));
     setSelectedItem(null);
+  };
+
+  // Update an existing cart item in-place (for edit mode)
+  const updateCartItem = (cartKey, baseItem, selectedOptions, addedPrice, qty, specialNote) => {
+    const nameWithOpts = selectedOptions.length > 0
+      ? `${baseItem.name} (${selectedOptions.map((o) => o.choiceLabel || o.name).join(", ")})`
+      : baseItem.name;
+    setCart((prev) => {
+      const existing = prev[cartKey];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [cartKey]: {
+          ...existing,
+          name: nameWithOpts,
+          price: baseItem.price + addedPrice,
+          qty,
+          selectedOptions,
+          specialNote,
+        },
+      };
+    });
+    setEditCartItem(null);
   };
 
   const handleAddCartItem = (cartItemId) =>
@@ -629,9 +719,10 @@ function MenuPageInner() {
     if (!hasCart || submitting) return;
     setSubmitting(true);
     try {
-      const freshItems = Object.values(cart).map(({ id, name, price, emoji, qty, selectedOptions }) => ({
+      const freshItems = Object.values(cart).map(({ id, name, price, emoji, qty, selectedOptions, specialNote }) => ({
         id, name, price, emoji, qty,
         selectedOptions: selectedOptions || [],
+        ...(specialNote ? { specialNote } : {}),
       }));
       const freshTotal = freshItems.reduce((s, i) => s + i.price * i.qty, 0);
       const orderId = await addOrder({
@@ -901,7 +992,35 @@ function MenuPageInner() {
       {/* ── MODALS / SHEETS ── */}
       {showCart && (
         <CartDrawer
-          cartItems={cartValues.map((i) => ({ ...i, onAdd: () => handleAddCartItem(i.id), onRemove: () => removeFromCart(i.id) }))}
+          cartItems={cartValues.map((i) => ({
+            ...i,
+            onAdd: () => handleAddCartItem(i.id),
+            onRemove: () => removeFromCart(i.id),
+            onEdit: i.selectedOptions?.length > 0 ? () => {
+              const menuItem = menuItems.find(m => m.id === i.baseId || String(m.id) === String(i.baseId));
+              if (!menuItem) return;
+              const initSel = {};
+              if (menuItem.options) {
+                menuItem.options.forEach(opt => {
+                  if (opt.type === 'radio') {
+                    const match = i.selectedOptions.find(s => s.optionLabel === opt.label);
+                    initSel[opt.id] = match ? (opt.choices.find(c => c.label === match.choiceLabel)?.id ?? null) : null;
+                  } else {
+                    initSel[opt.id] = new Set(
+                      i.selectedOptions
+                        .filter(s => s.optionLabel === opt.label)
+                        .map(s => opt.choices.find(c => c.label === s.choiceLabel)?.id)
+                        .filter(Boolean)
+                    );
+                  }
+                });
+              }
+              initSel.__qty = i.qty;
+              initSel.__note = i.specialNote ?? '';
+              setEditCartItem({ cartKey: i.id, item: menuItem, initialSelections: initSel });
+              setShowCart(false);
+            } : undefined,
+          }))}
           totalPrice={totalPrice}
           note={note}
           setNote={setNote}
@@ -919,6 +1038,19 @@ function MenuPageInner() {
           allGroups={optionGroups}
           onClose={() => setSelectedItem(null)}
           onConfirm={addToCart}
+        />
+      )}
+
+      {editCartItem && (
+        <ItemOptionsModal
+          item={editCartItem.item}
+          allGroups={optionGroups}
+          onClose={() => { setEditCartItem(null); setShowCart(true); }}
+          onConfirm={(baseItem, selectedOptions, addedPrice, qty, specialNote) =>
+            updateCartItem(editCartItem.cartKey, baseItem, selectedOptions, addedPrice, qty, specialNote)
+          }
+          editMode={true}
+          initialSelections={editCartItem.initialSelections}
         />
       )}
 

@@ -257,11 +257,15 @@ const EMOJI_OPTIONS = ["🍛","🍲","🍝","🍜","🍚","🍳","🥘","🫕","
 
 function OptionGroupModal({ group, onClose }) {
     const [name, setName] = useState(group ? group.name : "");
-    const [options, setOptions] = useState(group && group.options && group.options.length > 0 ? group.options : [{ name: "", price: 0 }]);
+    const [options, setOptions] = useState(
+        group && group.options && group.options.length > 0
+            ? group.options.map(o => ({ ...o, available: o.available !== false }))
+            : [{ name: "", price: 0, available: true }]
+    );
     const [saving, setSaving] = useState(false);
 
     function handleAddOption() {
-        setOptions([...options, { name: "", price: 0 }]);
+        setOptions([...options, { name: "", price: 0, available: true }]);
     }
     function handleRemoveOption(idx) {
         setOptions(options.filter((_, i) => i !== idx));
@@ -274,7 +278,9 @@ function OptionGroupModal({ group, onClose }) {
     async function handleSave(e) {
         e.preventDefault();
         if (!name.trim()) return;
-        const validOptions = options.filter(o => o.name.trim()).map(o => ({ name: o.name.trim(), price: Number(o.price) || 0 }));
+        const validOptions = options
+            .filter(o => o.name.trim())
+            .map(o => ({ name: o.name.trim(), price: Number(o.price) || 0, available: o.available !== false }));
         if (validOptions.length === 0) return;
         setSaving(true);
         try {
@@ -310,10 +316,19 @@ function OptionGroupModal({ group, onClose }) {
                     <div>
                         <label style={{display:'block',fontSize:'13px',fontWeight:600,color:'#374151',marginBottom:'8px'}}>ตัวเลือกย่อย</label>
                         {options.map((opt, i) => (
-                            <div key={i} style={{display:'flex',gap:'8px',marginBottom:'8px'}}>
+                            <div key={i} style={{display:'flex',gap:'8px',marginBottom:'8px',alignItems:'center'}}>
                                 <input type="text" value={opt.name} onChange={e => handleOptionChange(i, 'name', e.target.value)} placeholder="ชื่อ (เช่น หมู)" style={{flex:2,borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
                                 <input type="number" value={opt.price} onChange={e => handleOptionChange(i, 'price', e.target.value)} placeholder="+ราคา" style={{flex:1,borderRadius:'12px',padding:'12px',border:'1px solid #E5E7EB',fontSize:'15px',outline:'none'}} />
-                                <button type="button" onClick={() => handleRemoveOption(i)} style={{width:'44px',borderRadius:'12px',border:'1px solid #EF4444',background:'#FEF2F2',color:'#EF4444',fontSize:'16px'}}>✕</button>
+                                {/* Available toggle */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleOptionChange(i, 'available', opt.available !== false ? false : true)}
+                                    title={opt.available !== false ? 'พร้อมขาย' : 'หมดชั่วคราว'}
+                                    style={{width:'40px',height:'22px',borderRadius:'11px',background: opt.available !== false ? '#10B981' : '#D1D5DB',border:'none',position:'relative',flexShrink:0,cursor:'pointer',transition:'background 0.2s'}}
+                                >
+                                    <div style={{width:'18px',height:'18px',borderRadius:'9px',background:'white',position:'absolute',top:'2px',left: opt.available !== false ? '20px' : '2px',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.15)'}} />
+                                </button>
+                                <button type="button" onClick={() => handleRemoveOption(i)} style={{width:'44px',borderRadius:'12px',border:'1px solid #EF4444',background:'#FEF2F2',color:'#EF4444',fontSize:'16px',cursor:'pointer',flexShrink:0}}>✕</button>
                             </div>
                         ))}
                         <button type="button" onClick={handleAddOption} style={{width:'100%',padding:'10px',background:'#F3F4F6',color:'#374151',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'14px',marginTop:'4px'}}>+ เพิ่มตัวเลือก</button>
@@ -622,6 +637,14 @@ function MenuItemFormModal({ onClose, optionGroups, editItem }) {
                                                 onChange={e => updateChoice(group.id, choice.id, 'priceAdd', e.target.value)}
                                                 style={{width:'64px',borderRadius:'8px',padding:'7px 8px',border:'1px solid #D1D5DB',fontSize:'13px',outline:'none',background:'white',textAlign:'right'}}
                                             />
+                                            {/* Available mini toggle */}
+                                            <button type="button"
+                                                onClick={() => updateChoice(group.id, choice.id, 'available', choice.available !== false ? false : true)}
+                                                title={choice.available !== false ? 'พร้อมขาย — กดเพื่อปิด' : 'หมดชั่วคราว — กดเพื่อเปิด'}
+                                                style={{width:'36px',height:'20px',borderRadius:'10px',background: choice.available !== false ? '#10B981' : '#D1D5DB',border:'none',position:'relative',flexShrink:0,cursor:'pointer',transition:'background 0.2s'}}
+                                            >
+                                                <div style={{width:'16px',height:'16px',borderRadius:'8px',background:'white',position:'absolute',top:'2px',left: choice.available !== false ? '18px' : '2px',transition:'left 0.2s',boxShadow:'0 1px 2px rgba(0,0,0,0.15)'}} />
+                                            </button>
                                             <button type="button" onClick={() => removeChoice(group.id, choice.id)}
                                                 style={{width:'28px',height:'28px',borderRadius:'8px',border:'1px solid #E5E7EB',background:'white',color:'#9CA3AF',fontSize:'14px',cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
                                                 ×
