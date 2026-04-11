@@ -660,11 +660,12 @@ export default function AdminPage() {
             </div>
 
             {/* TAB BAR */}
-            <div style={{display:'flex',background:'white',borderBottom:'1px solid #E5E7EB'}}>
-                <button onClick={() => setActiveTab('tables')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'tables' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'tables' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'tables' ? 600 : 500,fontSize:'15px'}}>โต๊ะ</button>
-                <button onClick={() => setActiveTab('history')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'history' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'history' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'history' ? 600 : 500,fontSize:'15px'}}>ประวัติ</button>
-                <button onClick={() => setActiveTab('menu')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'menu' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'menu' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'menu' ? 600 : 500,fontSize:'15px'}}>เมนู</button>
-                <button onClick={() => setActiveTab('options')} style={{flex:1,padding:'12px',background:'none',border:'none',borderBottom: activeTab === 'options' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'options' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'options' ? 600 : 500,fontSize:'15px'}}>กลุ่มตัวเลือก</button>
+            <div style={{display:'flex',background:'white',borderBottom:'1px solid #E5E7EB',overflowX:'auto',scrollbarWidth:'none'}}>
+                <button onClick={() => setActiveTab('tables')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'tables' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'tables' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'tables' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>โต๊ะ</button>
+                <button onClick={() => setActiveTab('history')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'history' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'history' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'history' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>ประวัติ</button>
+                <button onClick={() => setActiveTab('menu')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'menu' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'menu' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'menu' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>เมนู</button>
+                <button onClick={() => setActiveTab('options')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'options' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'options' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'options' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>กลุ่มตัวเลือก</button>
+                <button onClick={() => setActiveTab('analytics')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'analytics' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'analytics' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'analytics' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>📊 สรุปยอดขาย</button>
             </div>
 
             <div style={{padding:'16px'}}>
@@ -792,6 +793,85 @@ export default function AdminPage() {
                         </button>
                     </div>
                 )}
+
+                {activeTab === 'analytics' && (() => {
+                    const doneOrders = todayOrders.filter((o) => o.status === 'paid' || o.status === 'done');
+                    const todayRevenue = doneOrders.reduce((s, o) => s + (o.total ?? 0), 0);
+
+                    // Count items sold
+                    const itemCount = {};
+                    doneOrders.forEach((o) => {
+                        (o.items ?? []).forEach((item) => {
+                            const key = item.name;
+                            itemCount[key] = (itemCount[key] ?? 0) + (item.qty ?? 1);
+                        });
+                    });
+                    const topItems = Object.entries(itemCount)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 5);
+
+                    const rankColors = ['#F59E0B','#9CA3AF','#CD7F32','#7C3AED','#7C3AED'];
+                    const rankEmojis = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+
+                    return (
+                        <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+
+                            {/* Revenue card */}
+                            <div style={{background:'linear-gradient(135deg,#7C3AED,#9D5CF6)',borderRadius:'16px',padding:'24px',color:'white',boxShadow:'0 4px 16px rgba(124,58,237,0.3)'}}>
+                                <div style={{fontSize:'13px',fontWeight:600,opacity:0.85,marginBottom:'8px',letterSpacing:'0.3px'}}>💰 ยอดขายรวมวันนี้</div>
+                                <div style={{fontSize:'40px',fontWeight:800,letterSpacing:'-1px',lineHeight:1}}>฿{todayRevenue.toLocaleString()}</div>
+                                <div style={{fontSize:'12px',opacity:0.7,marginTop:'8px'}}>จากออเดอร์ที่ปิดแล้ว {doneOrders.length} บิล</div>
+                            </div>
+
+                            {/* Order count + all-order count row */}
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+                                <div style={{background:'white',borderRadius:'14px',padding:'18px',border:'1px solid #E5E7EB',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+                                    <div style={{fontSize:'11px',color:'#6B7280',fontWeight:600,marginBottom:'6px',letterSpacing:'0.3px'}}>🧾 ออเดอร์วันนี้</div>
+                                    <div style={{fontSize:'32px',fontWeight:800,color:'#7C3AED',lineHeight:1}}>{todayOrders.length}</div>
+                                    <div style={{fontSize:'12px',color:'#9CA3AF',marginTop:'4px'}}>บิล</div>
+                                </div>
+                                <div style={{background:'white',borderRadius:'14px',padding:'18px',border:'1px solid #E5E7EB',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+                                    <div style={{fontSize:'11px',color:'#6B7280',fontWeight:600,marginBottom:'6px',letterSpacing:'0.3px'}}>✅ ปิดโต๊ะแล้ว</div>
+                                    <div style={{fontSize:'32px',fontWeight:800,color:'#10B981',lineHeight:1}}>{doneOrders.length}</div>
+                                    <div style={{fontSize:'12px',color:'#9CA3AF',marginTop:'4px'}}>บิล</div>
+                                </div>
+                            </div>
+
+                            {/* Top 5 best sellers */}
+                            <div style={{background:'white',borderRadius:'14px',border:'1px solid #E5E7EB',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+                                <div style={{padding:'16px 16px 12px',borderBottom:'1px solid #F3F4F6',display:'flex',alignItems:'center',gap:'8px'}}>
+                                    <span style={{fontSize:'16px'}}>🏆</span>
+                                    <span style={{fontSize:'14px',fontWeight:700,color:'#111111'}}>5 อันดับเมนูขายดีวันนี้</span>
+                                </div>
+                                {topItems.length === 0 ? (
+                                    <div style={{padding:'32px',textAlign:'center',color:'#9CA3AF',fontSize:'14px'}}>ยังไม่มีข้อมูลการขาย</div>
+                                ) : (
+                                    topItems.map(([name, count], i) => (
+                                        <div key={name} style={{display:'flex',alignItems:'center',padding:'12px 16px',borderBottom: i < topItems.length - 1 ? '1px solid #F9FAFB' : 'none'}}>
+                                            <div style={{width:'32px',textAlign:'center',fontSize:'18px',marginRight:'12px',flexShrink:0}}>{rankEmojis[i]}</div>
+                                            <div style={{flex:1,fontSize:'14px',fontWeight:500,color:'#111111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:'8px'}}>{name}</div>
+                                            <div style={{flexShrink:0,display:'flex',alignItems:'center',gap:'6px'}}>
+                                                <div style={{height:'6px',width:`${Math.max(24, (count / (topItems[0]?.[1] || 1)) * 80)}px`,background:rankColors[i],borderRadius:'3px',opacity:0.7}} />
+                                                <span style={{fontSize:'14px',fontWeight:700,color:rankColors[i],minWidth:'32px',textAlign:'right'}}>{count} จาน</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Average per bill */}
+                            {doneOrders.length > 0 && (
+                                <div style={{background:'#F0FDF4',borderRadius:'14px',padding:'16px',border:'1px solid #BBF7D0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                    <div>
+                                        <div style={{fontSize:'12px',color:'#16A34A',fontWeight:600,marginBottom:'4px'}}>📈 เฉลี่ยต่อบิล</div>
+                                        <div style={{fontSize:'12px',color:'#6B7280'}}>ยอดก่อนปิดโต๊ะ</div>
+                                    </div>
+                                    <div style={{fontSize:'26px',fontWeight:800,color:'#16A34A'}}>฿{Math.round(todayRevenue / doneOrders.length).toLocaleString()}</div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {selectedTable !== null && <TableModal tableNum={selectedTable} orders={tableOrders(selectedTable)} onClose={() => setSelectedTable(null)} onClear={(total) => handleClearTable(selectedTable, total)} />}
