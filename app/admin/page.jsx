@@ -510,7 +510,7 @@ function MenuItemFormModal({ onClose, optionGroups, editItem }) {
                                 </>
                             )}
                         </button>
-                        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={handleFileChange} />
+                        <input ref={fileInputRef} type="file" accept="image/png, image/jpeg, image/webp, image/*" style={{display:'none'}} onChange={handleFileChange} />
                     </div>
 
                     <div>
@@ -747,6 +747,14 @@ export default function AdminPage() {
         .reduce((s, o) => s + (o.total ?? 0), 0);
     const pendingCount = activeOrders.filter((o) => o.status === "pending").length;
 
+    // Split active orders: dine-in vs takeaway, sorted oldest-first
+    const activeTakeawayOrders = [...activeOrders]
+        .filter((o) => o.orderType === 'takeaway' || o.table === 'takeaway')
+        .sort((a, b) => (a.createdAt?.toDate?.() || new Date(0)) - (b.createdAt?.toDate?.() || new Date(0)));
+    const activeDineInOrders = [...activeOrders]
+        .filter((o) => o.orderType !== 'takeaway' && o.table !== 'takeaway')
+        .sort((a, b) => (a.createdAt?.toDate?.() || new Date(0)) - (b.createdAt?.toDate?.() || new Date(0)));
+
     function tableOrders(tableNum) {
         return activeOrders.filter((o) => o.table === tableNum);
     }
@@ -839,6 +847,12 @@ export default function AdminPage() {
             {/* TAB BAR */}
             <div style={{display:'flex',background:'white',borderBottom:'1px solid #E5E7EB',overflowX:'auto',scrollbarWidth:'none'}}>
                 <button onClick={() => setActiveTab('tables')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'tables' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'tables' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'tables' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>โต๊ะ</button>
+                <button onClick={() => setActiveTab('takeaway')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'takeaway' ? '2px solid #F97316' : '2px solid transparent',color: activeTab === 'takeaway' ? '#F97316' : '#6B7280',fontWeight: activeTab === 'takeaway' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:'4px'}}>
+                    🛍️ สั่งกลับบ้าน
+                    {activeTakeawayOrders.filter(o => o.status === 'pending').length > 0 && (
+                        <span style={{background:'#F97316',color:'white',borderRadius:'10px',fontSize:'11px',fontWeight:700,padding:'1px 7px',marginLeft:'2px'}}>{activeTakeawayOrders.filter(o => o.status === 'pending').length}</span>
+                    )}
+                </button>
                 <button onClick={() => setActiveTab('history')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'history' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'history' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'history' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>ประวัติ</button>
                 <button onClick={() => setActiveTab('menu')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'menu' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'menu' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'menu' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>เมนู</button>
                 <button onClick={() => setActiveTab('options')} style={{flexShrink:0,padding:'12px 14px',background:'none',border:'none',borderBottom: activeTab === 'options' ? '2px solid #7C3AED' : '2px solid transparent',color: activeTab === 'options' ? '#7C3AED' : '#6B7280',fontWeight: activeTab === 'options' ? 600 : 500,fontSize:'14px',whiteSpace:'nowrap'}}>กลุ่มตัวเลือก</button>
@@ -888,14 +902,67 @@ export default function AdminPage() {
                     </div>
                 )}
 
+                {activeTab === 'takeaway' && (
+                    <div>
+                        {activeTakeawayOrders.length === 0 ? (
+                            <div style={{textAlign:'center',padding:'48px 24px',color:'#6B7280'}}>
+                                <div style={{fontSize:'40px',marginBottom:'12px'}}>🛍️</div>
+                                <div style={{fontSize:'15px',fontWeight:600,marginBottom:'4px'}}>ยังไม่มีออเดอร์สั่งกลับบ้าน</div>
+                            </div>
+                        ) : (
+                            activeTakeawayOrders.map((order) => (
+                                <div
+                                    key={order.id}
+                                    style={{
+                                        background:'linear-gradient(135deg,#FFF7ED,#FFFBF5)',
+                                        border:'2px solid',
+                                        borderColor: order.status === 'pending' ? '#F97316' : order.status === 'ready' ? '#10B981' : '#FED7AA',
+                                        borderRadius:'14px',
+                                        padding:'14px 16px',
+                                        marginBottom:'10px',
+                                    }}
+                                >
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}>
+                                        <div>
+                                            <div style={{fontSize:'16px',fontWeight:800,color:'#EA580C'}}>🛍️ คิวที่ {order.queueNumber ?? '-'}</div>
+                                            <div style={{fontSize:'13px',fontWeight:600,color:'#374151',marginTop:'2px'}}>คุณ: {order.customerName || '-'}</div>
+                                        </div>
+                                        <StatusBadge status={order.status} />
+                                    </div>
+                                    <div style={{fontSize:'12px',color:'#6B7280',marginBottom:'8px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                        {(order.items ?? []).map(i => `${i.name} ×${i.qty}`).join(', ')}
+                                    </div>
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                        <div style={{fontSize:'14px',fontWeight:700,color:'#7C3AED'}}>฿{(order.total ?? 0).toLocaleString()}</div>
+                                        <div style={{display:'flex',gap:'6px'}}>
+                                            {order.status === 'pending' && (
+                                                <button onClick={() => updateOrderStatus(order.id,'preparing')} style={{fontSize:'11px',padding:'5px 12px',background:'#FFF7ED',color:'#EA580C',border:'1px solid #FDBA74',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>กำลังทำ</button>
+                                            )}
+                                            {order.status === 'preparing' && (
+                                                <button onClick={() => updateOrderStatus(order.id,'ready')} style={{fontSize:'11px',padding:'5px 12px',background:'#D1FAE5',color:'#059669',border:'1px solid #6EE7B7',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>พร้อมแล้ว</button>
+                                            )}
+                                            {order.status === 'ready' && (
+                                                <button onClick={() => updateOrderStatus(order.id,'done')} style={{fontSize:'11px',padding:'5px 12px',background:'#F3F4F6',color:'#374151',border:'1px solid #D1D5DB',borderRadius:'8px',fontWeight:600,cursor:'pointer'}}>รับแล้ว ✓</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
+
                 {activeTab === 'history' && (
                     <div>
                         {allOrders.length === 0 ? <div style={{textAlign:'center',padding:'32px',color:'#6B7280'}}>ไม่มีประวัติออเดอร์</div> : (
-                            allOrders.sort((a,b)=>(b.createdAt?.toDate?.()||new Date()) - (a.createdAt?.toDate?.()||new Date())).map(order => (
-                                <button key={order.id} onClick={() => setHistoryOrder(order)} style={{width:'100%',textAlign:'left',background:'white',border:'1px solid #E5E7EB',borderRadius:'10px',padding:'12px',marginBottom:'8px',display:'flex',flexDirection:'column'}}>
+                            [...allOrders].sort((a,b) => (b.createdAt?.toDate?.() || new Date()) - (a.createdAt?.toDate?.() || new Date())).map(order => (
+                                <button key={order.id} onClick={() => setHistoryOrder(order)} style={{width:'100%',textAlign:'left',background: order.orderType === 'takeaway' ? '#FFF7ED' : 'white',border:'1px solid',borderColor: order.orderType === 'takeaway' ? '#FED7AA' : '#E5E7EB',borderRadius:'10px',padding:'12px',marginBottom:'8px',display:'flex',flexDirection:'column'}}>
                                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%',marginBottom:'8px'}}>
                                         <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                                            <div style={{fontSize:'14px',fontWeight:700,color:'#111111'}}>โต๊ะ {order.table}</div>
+                                            {order.orderType === 'takeaway'
+                                                ? <div style={{fontSize:'14px',fontWeight:700,color:'#EA580C'}}>🛍️ คิว {order.queueNumber ?? '-'} · {order.customerName}</div>
+                                                : <div style={{fontSize:'14px',fontWeight:700,color:'#111111'}}>โต๊ะ {order.table}</div>
+                                            }
                                             <div style={{fontSize:'12px',color:'#6B7280'}}>{formatTime(order.createdAt)}</div>
                                         </div>
                                         <StatusBadge status={order.status} />

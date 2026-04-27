@@ -17,6 +17,9 @@ export default function Home() {
         <Link href="/menu?table=1" style={{display:'block',padding:'16px',background:'#7C3AED',color:'white',borderRadius:14,textAlign:'center',fontSize:15,fontWeight:600,textDecoration:'none',boxShadow:'0 4px 12px rgba(124,58,237,0.3)'}}>
           เปิดเมนู (ลูกค้า)
         </Link>
+        <Link href="/menu?table=takeaway" style={{display:'block',padding:'16px',background:'linear-gradient(135deg,#F97316,#EA580C)',color:'white',borderRadius:14,textAlign:'center',fontSize:15,fontWeight:600,textDecoration:'none',boxShadow:'0 4px 12px rgba(249,115,22,0.3)'}}>
+          🛍️ สั่งกลับบ้าน (Takeaway)
+        </Link>
         <Link href="/admin" style={{display:'block',padding:'16px',background:'white',color:'#7C3AED',border:'1.5px solid #7C3AED',borderRadius:14,textAlign:'center',fontSize:15,fontWeight:600,textDecoration:'none'}}>
           แดชบอร์ดร้าน
         </Link>

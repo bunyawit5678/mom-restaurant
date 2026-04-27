@@ -7,6 +7,7 @@ import {
   addOrder,
   listenToOptionGroups,
   listenToOrdersByIds,
+  getTodayTakeawayCount,
 } from "@/lib/firestore";
 import { CATEGORIES } from "@/data/menu";
 
@@ -154,13 +155,24 @@ function OrderStatusSheet({ table, customerName, onClose }) {
 // SuccessModal
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SuccessModal({ onClose }) {
+function SuccessModal({ onClose, isTakeaway, queueNumber, customerName }) {
   return (
     <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.4)',padding:'16px'}}>
       <div style={{background:'white',borderRadius:'24px',padding:'32px',width:'100%',maxWidth:'320px',textAlign:'center'}}>
-        <div style={{fontSize:'64px',marginBottom:'16px'}}>✅</div>
-        <h2 style={{fontSize:'20px',fontWeight:700,marginBottom:'8px'}}>ส่งออเดอร์ให้แม่ครัวแล้ว!</h2>
-        <p style={{fontSize:'14px',color:'#6B7280',marginBottom:'24px'}}>กรุณารอรับอาหาร ทางร้านกำลังเตรียมให้นะคะ</p>
+        {isTakeaway ? (
+          <>
+            <div style={{fontSize:'64px',marginBottom:'16px'}}>🛍️</div>
+            <h2 style={{fontSize:'20px',fontWeight:700,marginBottom:'8px'}}>สั่งแล้ว! คิวที่ {queueNumber}</h2>
+            <p style={{fontSize:'15px',color:'#6B7280',marginBottom:'4px'}}>สำหรับ คุณ {customerName}</p>
+            <p style={{fontSize:'14px',color:'#6B7280',marginBottom:'24px'}}>ทางร้านกำลังเตรียม กรุณารอและเชิญรับอาหารได้เลยค่ะ ❤️</p>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:'64px',marginBottom:'16px'}}>✅</div>
+            <h2 style={{fontSize:'20px',fontWeight:700,marginBottom:'8px'}}>ส่งออเดอร์ให้แม่ครัวแล้ว!</h2>
+            <p style={{fontSize:'14px',color:'#6B7280',marginBottom:'24px'}}>กรุณารอรับอาหาร ทางร้านกำลังเตรียมให้นะคะ</p>
+          </>
+        )}
         <button onClick={onClose} style={{width:'100%',padding:'14px',background:'#F3F4F6',color:'#374151',fontWeight:600,borderRadius:'12px',border:'none'}}>
           กลับไปหน้าเมนู
         </button>
@@ -487,7 +499,7 @@ function ItemOptionsModal({ item, allGroups, onClose, onConfirm, editMode, initi
 // CartDrawer
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, submitting }) {
+function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, submitting, isTakeaway, takeawayName, setTakeawayName }) {
   return (
     <>
       <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.4)',zIndex:40}} onClick={onClose} />
@@ -535,6 +547,29 @@ function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, s
               </div>
             </div>
           ))}
+
+          {/* Takeaway name input */}
+          {isTakeaway && (
+            <div style={{marginTop:'4px'}}>
+              <label style={{display:'block',fontSize:'13px',fontWeight:700,color:'#F97316',marginBottom:'6px'}}>🛍️ ชื่อสำหรับรับอาหาร *</label>
+              <input
+                type="text"
+                value={takeawayName}
+                onChange={(e) => setTakeawayName(e.target.value)}
+                placeholder="กรุณากรอกชื่อของคุณ"
+                autoFocus
+                style={{
+                  width:'100%',padding:'12px',border:'2px solid',
+                  borderColor: takeawayName.trim() ? '#F97316' : '#E5E7EB',
+                  borderRadius:'10px',fontSize:'15px',outline:'none',
+                  boxSizing:'border-box',transition:'border-color 0.2s',
+                }}
+              />
+              {!takeawayName.trim() && (
+                <div style={{fontSize:'12px',color:'#EF4444',marginTop:'4px'}}>⚠️ กรุณากรอกชื่อก่อนยืนยันสั่งซื้อ</div>
+              )}
+            </div>
+          )}
           
           <div style={{marginTop:'8px'}}>
             <textarea
@@ -553,10 +588,10 @@ function CartDrawer({ cartItems, totalPrice, note, setNote, onClose, onSubmit, s
           
           <button 
             onClick={onSubmit}
-            disabled={submitting}
-            style={{width:'100%',padding:'16px',background:'#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'16px',opacity:submitting ? 0.7 : 1}}
+            disabled={submitting || (isTakeaway && !takeawayName.trim())}
+            style={{width:'100%',padding:'16px',background: isTakeaway ? 'linear-gradient(135deg,#F97316,#EA580C)' : '#7C3AED',color:'white',borderRadius:'12px',border:'none',fontWeight:600,fontSize:'16px',opacity:(submitting || (isTakeaway && !takeawayName.trim())) ? 0.5 : 1,transition:'opacity 0.2s'}}
           >
-            {submitting ? 'กำลังส่ง...' : 'ยืนยันสั่งอาหาร'}
+            {submitting ? 'กำลังส่ง...' : (isTakeaway ? '🛍️ ยืนยันสั่งกลับบ้าน' : 'ยืนยันสั่งอาหาร')}
           </button>
         </div>
       </div>
@@ -589,6 +624,7 @@ function MenuPageInner() {
   const [note, setNote]                   = useState("");
   const [submitting, setSubmitting]       = useState(false);
   const [showSuccess, setShowSuccess]     = useState(false);
+  const [successInfo, setSuccessInfo]     = useState(null); // { queueNumber, customerName } for takeaway
   const [showCart, setShowCart]           = useState(false);
   const [selectedItem, setSelectedItem]   = useState(null);
   const [editCartItem, setEditCartItem]   = useState(null); // { cartKey, item, initialSelections }
@@ -601,6 +637,10 @@ function MenuPageInner() {
   // ── Feature 5: Order Status ─────────────────────────────────────────────
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   const [sessionOrderCount, setSessionOrderCount] = useState(() => getSessionOrderIds().length);
+
+  // ── Takeaway state ───────────────────────────────────────────────────────
+  const isTakeaway = table === 'takeaway';
+  const [takeawayName, setTakeawayName] = useState("");
 
   // ── Firestore listeners ──────────────────────────────────────────────────
   useEffect(() => {
@@ -717,6 +757,7 @@ function MenuPageInner() {
 
   const handleSubmit = async () => {
     if (!hasCart || submitting) return;
+    if (isTakeaway && !takeawayName.trim()) return;
     setSubmitting(true);
     try {
       const freshItems = Object.values(cart).map(({ id, name, price, emoji, qty, selectedOptions, specialNote }) => ({
@@ -725,19 +766,42 @@ function MenuPageInner() {
         ...(specialNote ? { specialNote } : {}),
       }));
       const freshTotal = freshItems.reduce((s, i) => s + i.price * i.qty, 0);
-      const orderId = await addOrder({
-        table: Number(table),
-        customerName: customerName || "",
-        items: freshItems,
-        total: freshTotal,
-        note,
-      });
+
+      let orderData;
+      if (isTakeaway) {
+        const queueNumber = await getTodayTakeawayCount();
+        orderData = {
+          table: 'takeaway',
+          orderType: 'takeaway',
+          customerName: takeawayName.trim(),
+          queueNumber,
+          items: freshItems,
+          total: freshTotal,
+          note,
+        };
+      } else {
+        orderData = {
+          table: Number(table),
+          orderType: 'dine-in',
+          customerName: customerName || "",
+          items: freshItems,
+          total: freshTotal,
+          note,
+        };
+      }
+
+      const orderId = await addOrder(orderData);
       // Feature 5: save order ID to session
       pushSessionOrderId(orderId);
       setSessionOrderCount(getSessionOrderIds().length);
       setCart({});
       setNote("");
       setShowCart(false);
+      if (isTakeaway) {
+        setSuccessInfo({ queueNumber: orderData.queueNumber, customerName: orderData.customerName });
+      } else {
+        setSuccessInfo(null);
+      }
       setShowSuccess(true);
     } catch (err) {
       console.error("addOrder failed:", err);
@@ -789,8 +853,8 @@ function MenuPageInner() {
   // ── Wait until localStorage is read ─────────────────────────────────────
   if (customerName === null) return null;
 
-  // ── Feature 1: Show name screen ──────────────────────────────────────────
-  if (customerName === "") {
+  // ── Feature 1: Show name screen (skip for takeaway) ──────────────────────
+  if (!isTakeaway && customerName === "") {
     return <NameScreen table={table} onDone={setCustomerName} />;
   }
 
@@ -800,10 +864,13 @@ function MenuPageInner() {
       {/* ── STICKY HEADER + SEARCH + CATEGORY BAR ── */}
       <div style={{position:'sticky',top:0,zIndex:30}}>
         {/* HEADER */}
-        <div style={{background:'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{background: isTakeaway ? 'linear-gradient(135deg,#FFF7ED,#FFEDD5)' : 'white',borderBottom:'1px solid #E5E7EB',height:'56px',padding:'0 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div style={{fontWeight:700,fontSize:'17px',color:'#111111'}}>
             ครัวตุ๊กตาอาหารตามสั่ง{' '}
-            <span style={{fontSize:'13px',color:'#6B7280',fontWeight:400,marginLeft:'4px'}}>โต๊ะ {table}</span>
+            {isTakeaway
+              ? <span style={{fontSize:'13px',color:'#F97316',fontWeight:600,marginLeft:'4px'}}>🛍️ สั่งกลับบ้าน</span>
+              : <span style={{fontSize:'13px',color:'#6B7280',fontWeight:400,marginLeft:'4px'}}>โต๊ะ {table}</span>
+            }
           </div>
           <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
             {/* Feature 1: customer name */}
@@ -1027,10 +1094,13 @@ function MenuPageInner() {
           onClose={() => setShowCart(false)}
           onSubmit={handleSubmit}
           submitting={submitting}
+          isTakeaway={isTakeaway}
+          takeawayName={takeawayName}
+          setTakeawayName={setTakeawayName}
         />
       )}
 
-      {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
+      {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} isTakeaway={isTakeaway} queueNumber={successInfo?.queueNumber} customerName={successInfo?.customerName} />}
 
       {selectedItem && (
         <ItemOptionsModal
