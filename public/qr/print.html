@@ -1,187 +1,208 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ครัวตุ๊กตาอาหารตามสั่ง — พิมพ์ QR Code โต๊ะ</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>พิมพ์ QR Code - ครัวตุ๊กตาอาหารตามสั่ง</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    /* ── Reset ───────────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple-main: #7c3aed;
+      --purple-light: #ede9fe;
+      --orange-main: #ea580c;
+      --orange-light: #ffedd5;
+      --text-dark: #1e293b;
+    }
 
-    /* ── Screen styles ───────────────────────────────────────────────────── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Sarabun', sans-serif;
-      background: #f0ece6;
-      padding: 24px;
+      font-family: 'Prompt', sans-serif;
+      background-color: #f1f5f9;
+      color: var(--text-dark);
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
-    .screen-header {
-      text-align: center;
-      margin-bottom: 20px;
+    @page {
+      size: A4;
+      margin: 0;
     }
 
-    .screen-header h1 {
-      font-size: 22px;
-      font-weight: 800;
-      color: #1C1410;
-    }
-
-    .screen-header p {
-      font-size: 13px;
-      color: #888;
-      margin-top: 4px;
-    }
-
-    /* ── Card grid ───────────────────────────────────────────────────────── */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      max-width: 720px;
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 15mm;
       margin: 0 auto;
+      background: white;
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 15mm;
+      page-break-after: always;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        box-shadow: none;
+        margin: 0;
+      }
+
+      .no-print {
+        display: none !important;
+      }
     }
 
     .card {
-      background: #ffffff;
-      border: 2px dashed #ccc; /* cut-line guide */
-      border-radius: 12px;
-      padding: 16px 12px 12px;
+      border-radius: 24px;
+      padding: 30px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      text-align: center;
+      border: 3px dashed #cbd5e1;
+      position: relative;
+      overflow: hidden;
     }
 
-    .card img {
-      width: 100%;
-      max-width: 200px;
-      height: auto;
+    .card.table-card {
+      background-color: var(--purple-light);
+      border-color: #c4b5fd;
+    }
+
+    .card.takeaway-card {
+      background-color: var(--orange-light);
+      border-color: #fdba74;
+    }
+
+    .header-text {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: var(--text-dark);
+    }
+
+    .sub-text {
+      font-size: 20px;
+      color: #475569;
+      margin-bottom: 25px;
+      font-weight: 400;
+    }
+
+    .qr-container {
+      background: white;
+      padding: 15px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+      margin-bottom: 25px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .qr-container img {
+      width: 220px;
+      height: 220px;
       display: block;
     }
 
-    .table-number {
-      font-size: 28px;
-      font-weight: 800;
-      color: #1C1410;
-      letter-spacing: 0.5px;
+    .table-badge {
+      background-color: var(--purple-main);
+      color: white;
+      font-size: 42px;
+      font-weight: 700;
+      padding: 10px 40px;
+      border-radius: 50px;
     }
 
-    .restaurant-name {
-      font-size: 13px;
-      color: #888;
+    .takeaway-badge {
+      background-color: var(--orange-main);
+      color: white;
+      font-size: 36px;
+      font-weight: 700;
+      padding: 10px 40px;
+      border-radius: 50px;
     }
 
-    .hint {
-      font-size: 10px;
-      color: #bbb;
+    .print-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--purple-main);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-family: inherit;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
     }
 
-    /* ── Print styles ────────────────────────────────────────────────────── */
-    @media print {
-      @page {
-        size: A4 portrait;
-        margin: 5mm;
-      }
-
-      body {
-        background: #fff;
-        padding: 0;
-      }
-
-      .screen-header {
-        display: none;
-      }
-
-      .grid {
-        max-width: 100%;
-        gap: 0;
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .card {
-        border-radius: 0;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        padding: 8mm 6mm 6mm;
-        border: 1.5px dashed #aaa;
-      }
-
-      .card img {
-        max-width: 160px;
-      }
+    .print-btn:hover {
+      transform: scale(1.05);
     }
   </style>
 </head>
+
 <body>
 
-  <div class="screen-header">
-    <h1>🍜 ครัวตุ๊กตาอาหารตามสั่ง — QR Code แต่ละโต๊ะ</h1>
-    <p>พิมพ์หน้านี้ ตัดตามเส้นประ แล้วนำไปวางที่โต๊ะ</p>
+  <button class="print-btn no-print" onclick="window.print()">พิมพ์คิวอาร์โค้ด</button>
+
+  <div class="page">
+    <div class="card table-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหาร</div>
+      <div class="qr-container"><img src="./table-1.png" alt="QR โต๊ะ 1"></div>
+      <div class="table-badge">โต๊ะ 1</div>
+    </div>
+    <div class="card table-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหาร</div>
+      <div class="qr-container"><img src="./table-2.png" alt="QR โต๊ะ 2"></div>
+      <div class="table-badge">โต๊ะ 2</div>
+    </div>
   </div>
 
-  <div class="grid">
-
-    <div class="card">
-      <img src="table-1.png" alt="QR โต๊ะ 1" />
-      <p class="table-number">โต๊ะ 1</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+  <div class="page">
+    <div class="card table-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหาร</div>
+      <div class="qr-container"><img src="./table-3.png" alt="QR โต๊ะ 3"></div>
+      <div class="table-badge">โต๊ะ 3</div>
     </div>
-
-    <div class="card">
-      <img src="table-2.png" alt="QR โต๊ะ 2" />
-      <p class="table-number">โต๊ะ 2</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    <div class="card table-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหาร</div>
+      <div class="qr-container"><img src="./table-4.png" alt="QR โต๊ะ 4"></div>
+      <div class="table-badge">โต๊ะ 4</div>
     </div>
+  </div>
 
-    <div class="card">
-      <img src="table-3.png" alt="QR โต๊ะ 3" />
-      <p class="table-number">โต๊ะ 3</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+  <div class="page">
+    <div class="card table-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหาร</div>
+      <div class="qr-container"><img src="./table-5.png" alt="QR โต๊ะ 5"></div>
+      <div class="table-badge">โต๊ะ 5</div>
     </div>
-
-    <div class="card">
-      <img src="table-4.png" alt="QR โต๊ะ 4" />
-      <p class="table-number">โต๊ะ 4</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
+    <div class="card takeaway-card">
+      <div class="header-text">ครัวตุ๊กตาอาหารตามสั่ง</div>
+      <div class="sub-text">สแกนเพื่อสั่งอาหารกลับบ้าน</div>
+      <div class="qr-container"><img src="./takeaway.png" alt="QR สั่งกลับบ้าน"></div>
+      <div class="takeaway-badge">สั่งกลับบ้าน</div>
     </div>
-
-    <div class="card">
-      <img src="table-5.png" alt="QR โต๊ะ 5" />
-      <p class="table-number">โต๊ะ 5</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
-    </div>
-
-    <div class="card">
-      <img src="table-6.png" alt="QR โต๊ะ 6" />
-      <p class="table-number">โต๊ะ 6</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
-    </div>
-
-    <div class="card">
-      <img src="table-7.png" alt="QR โต๊ะ 7" />
-      <p class="table-number">โต๊ะ 7</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
-    </div>
-
-    <div class="card">
-      <img src="table-8.png" alt="QR โต๊ะ 8" />
-      <p class="table-number">โต๊ะ 8</p>
-      <p class="restaurant-name">ครัวตุ๊กตาอาหารตามสั่ง</p>
-      <p class="hint">สแกนเพื่อดูเมนูและสั่งอาหาร</p>
-    </div>
-
   </div>
 
 </body>
+
 </html>
