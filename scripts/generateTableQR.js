@@ -39,4 +39,11 @@ for (let table = 1; table <= NUM_TABLES; table++) {
   console.log(`  ✓ Table ${table}  →  ${filePath}`);
 }
 
-console.log(`\n✓ Generated ${NUM_TABLES} QR codes in ${OUTPUT_DIR}/\n`);
+// ── Takeaway QR ───────────────────────────────────────────────────────────────
+const takeawayUrl      = `${BASE_URL}/menu?table=takeaway`;
+const takeawayFilePath = `${OUTPUT_DIR}/takeaway.png`;
+
+await QRCode.toFile(takeawayFilePath, takeawayUrl, QR_OPTIONS);
+console.log(`  ✓ Takeaway   →  ${takeawayFilePath}`);
+
+console.log(`\n✓ Generated ${NUM_TABLES} table QR codes + 1 takeaway QR code in ${OUTPUT_DIR}/\n`);
